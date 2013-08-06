@@ -1,0 +1,30 @@
+.center {
+    position: absolute;
+    top: 40%;
+    left: 30%;
+}
+
+.answer {
+    font-size: 500%;
+    text-align: center;
+    text-transform: capitalize;
+    width: 50%;
+}
+
+.where {
+    text-align: justify;
+    width: 100%;
+}
+
+.footer {
+    position: absolute;
+    bottom: 0;
+    color: gray;
+}
+
+.msg {
+    width: 100%;
+    text-align: center;
+    font-color: red;
+}
+
