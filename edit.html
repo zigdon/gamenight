@@ -1,0 +1,81 @@
+{% autoescape true %}
+<html>
+    <head>
+        <title>Is there a game night this week?</title>
+        <link type="text/css" rel="stylesheet" href="/stylesheets/main.css" />
+    </head>
+    <body>
+        <h1>About</h1>
+        <p>Allow people to invite gamenight over to their house. Select the days
+        you want to host, and fill in the details (where, when, notes.)</p>
+        <p>If multiple people are volunteering for the same weekend, we allow
+        selecting how important it is for you to host. If you are willing to
+        host, but have no particular attachment to this weekend, select 'can.'
+        If you have a preference to host this week, select 'want.' And if there
+        is a special occasion, and it is really important for you to host,
+        select 'insist.'</p>
+        <p>If multiple people are volunteering to host on the same weekend, the
+        system will select someone randomly from the same priority level. That
+        said, if you see someone else has asked to host on a weekend you
+        particularly want, it is recommend you talk to them and have one or the
+        other withdraw.</p>
+
+        <h1>Current Schedule</h1>
+        <ul>
+            {% for gn in scheduled %}
+                <li><span class="label">When:</span>
+                    <span class="date">{{ gn.date }}</span> @ 
+                    <span class="label">Where:</span>
+                    <span class="location">{{ gn.location }}</span>
+                    <span class="label">Host:</span>
+                    <span class="location">{{ gn.owner }}</span></br>
+                    <span class="notes">{{ gn.notes }}</span>
+                    {% if gn.owner == user or admin %}
+                        Change...
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+
+        <h1>Invitations</h1>
+        <ul>
+            {% for app in applications %}
+                <li><span class="label">When:</span>
+                    <span class="date">{{ app.date }}</span> @ 
+                    <span class="label">Where:</span>
+                    <span class="location">{{ app.location }}</span>
+                    <span class="label">Host:</span>
+                    <span class="location">{{ app.location }}</span>
+                    <span class="label">Priority:</span>
+                    <span class="priority">{{ app.priority }}</span></br>
+                    <span class="notes">{{ app.notes }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <h1>Preferences</h1>
+        <form method="post">
+            <ul>
+                <li><label>Default location: 
+                    <input type="text" name="default" 
+                        value="{{ default }}" /></label>
+            </ul>
+            <input type="submit" value="Save"/>
+        </form>
+
+        {% if admin %}
+            <h1>Users</h1>
+            <ul>
+                {% for user in users %}
+                    <li>{{ user.account }} - 
+                        {{ user.color }}
+                        {{ user.admin }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %} 
+
+        You are logged in as {{ user }}. <a href="{{ logout }}">Log out</a>
+    </body>
+</html>
+{% endautoescape %}

@@ -42,6 +42,6 @@ a {
     bottom: 0;
 }
 
-li {
+.future li {
     list-style-type: none;
 }

@@ -42,6 +42,28 @@ class MainPage(webapp2.RequestHandler):
         self.response.write(template.render(template_values))
 
 
+class EditPage(webapp2.RequestHandler):
+
+    def get(self):
+
+        sys_user = users.get_current_user()
+        if not sys_user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        user = User.get_or_insert(sys_user.email())
+
+        futurenights = Gamenight.future(100)
+        template_values = {
+            'scheduled': futurenights,
+            'logout': users.create_logout_url('/'),
+            'user': user.key.id(),
+            'admin': user.superuser,
+        }
+
+        template = JINJA_ENVIRONMNT.get_template('edit.html')
+        self.response.write(template.render(template_values))
+
 class Utils:
 
     @classmethod
@@ -68,6 +90,7 @@ class Utils:
 
 application = webapp2.WSGIApplication([
     ('/', MainPage),
+    ('/edit', EditPage),
 ], debug=True)
 
 # vim: set ts=4 sts=4 sw=4 et:
