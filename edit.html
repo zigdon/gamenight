@@ -24,56 +24,87 @@
         <ul>
             {% for gn in scheduled %}
                 <li><span class="label">When:</span>
-                    <span class="date">{{ gn.date }}</span> @ 
+                    <span class="date">{{ gn.date }}</span> @
                     <span class="label">Where:</span>
                     <span class="location">{{ gn.location }}</span>
                     <span class="label">Host:</span>
-                    <span class="location">{{ gn.owner }}</span></br>
+                    <span class="location">{{ gn.owner.get().name }}</span></br>
                     <span class="notes">{{ gn.notes }}</span>
                     {% if gn.owner == user or admin %}
-                        Change...
+                        <a href="/edit?gnid={{ gn.key.id() }}">Edit...</a>
                     {% endif %}
                 </li>
             {% endfor %}
         </ul>
 
         <h1>Invitations</h1>
+        <form method="post">
+            <ul>
+                {% for app in applications %}
+                    <li><span class="label">When:</span>
+                        <span class="date">{{ app.date }}</span> @
+                        <span class="label">Where:</span>
+                        <span class="location">{{ app.location }}</span>
+                        <span class="label">Host:</span>
+                        <span class="host">{{ app.owner.get().name }}</span>
+                        <span class="label">Priority:</span>
+                        <span class="priority">{{ app.priority }}</span></br>
+                        <span class="notes">{{ app.notes }}</span>
+                        {% if app.owner == user or admin %}
+                            <a href="/edit?appid={{ app.key.id() }}">Withdraw...</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </form>
+
+        Invite people over!<br />
         <ul>
-            {% for app in applications %}
-                <li><span class="label">When:</span>
-                    <span class="date">{{ app.date }}</span> @ 
-                    <span class="label">Where:</span>
-                    <span class="location">{{ app.location }}</span>
-                    <span class="label">Host:</span>
-                    <span class="location">{{ app.location }}</span>
-                    <span class="label">Priority:</span>
-                    <span class="priority">{{ app.priority }}</span></br>
-                    <span class="notes">{{ app.notes }}</span>
-                </li>
-            {% endfor %}
+            <li><span class="label">When:</span>
+                <input type="text" name="when"
+                    value="{{ next_open }}" /></li>
+            <li><span class="label">Where:</span>
+                <input type="text" name="where"
+                    value="{{ default }}" /></li>
+            <li><span class="label">Priority:</span>
+                <select name="priority">
+                    <option>Can</option>
+                    <option>Want</option>
+                    <option>Insist</option>
+                </select></li>
+            <li><span class="label">Notes:</span>
+                <input type="text" name="notes" /></li>
         </ul>
+
+        <input type="submit" name="invite" value="Save"/>
 
         <h1>Preferences</h1>
         <form method="post">
             <ul>
-                <li><label>Default location: 
-                    <input type="text" name="default" 
+                <li><label>Default location:
+                    <input type="text" name="default"
                         value="{{ default }}" /></label>
             </ul>
-            <input type="submit" value="Save"/>
+            <input type="submit" name="preferences" value="Save"/>
         </form>
 
         {% if admin %}
             <h1>Users</h1>
-            <ul>
-                {% for user in users %}
-                    <li>{{ user.account }} - 
-                        {{ user.color }}
-                        {{ user.admin }}
-                    </li>
-                {% endfor %}
-            </ul>
-        {% endif %} 
+            <form method="post">
+                <table>
+                    <tr><th>User</th><th>Name</th><th>Color</th><th>Admin</th></tr>
+                    {% for user in users %}
+                        <tr><td>{{ user.key.id() }}</td>
+                            <td><input type="text" value="{{ user.name }}" /></td>
+                            <td><input type="text" value="{{ user.color }}" /></td>
+                            <td><input type="checkbox"
+                                {% if user.admin %}checked{%endif%} /></td>
+                        </tr>
+                    {% endfor %}
+                </table>
+                <input type="submit" name="users" value="Save"/>
+            </form>
+        {% endif %}
 
         You are logged in as {{ user }}. <a href="{{ logout }}">Log out</a>
     </body>

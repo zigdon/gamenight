@@ -70,6 +70,7 @@ class Application(ndb.Model):
 
 class User(ndb.Model):
     """Accounts of people who host."""
+    name = ndb.StringProperty('n')
     location = ndb.StringProperty('l', indexed=False)
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')

@@ -45,3 +45,8 @@ a {
 .future li {
     list-style-type: none;
 }
+
+.label {
+    font-weight: bold;
+    color: gray;
+}

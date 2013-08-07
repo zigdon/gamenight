@@ -59,6 +59,7 @@ class EditPage(webapp2.RequestHandler):
             'logout': users.create_logout_url('/'),
             'user': user.key.id(),
             'admin': user.superuser,
+            'users': User.query().fetch(100),
         }
 
         template = JINJA_ENVIRONMNT.get_template('edit.html')
