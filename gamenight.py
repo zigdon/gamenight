@@ -22,6 +22,9 @@ class MainPage(webapp2.RequestHandler):
     def get(self):
         futurenights = Gamenight.future(10)
         gamenight = GamenightNext.get()
+        if futurenights and futurenights[0].this_week():
+            futurenights = futurenights[1:]
+
         template_values = {
           'future': futurenights,
           'status': gamenight.status,
