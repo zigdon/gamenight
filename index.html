@@ -18,6 +18,7 @@
         {% for gn in future %}
           <li class="scheduled">{{ gn.date.strftime("%x") }} @ {{ gn.location }}</li>
         {% endfor %}
+          <li class="scheduled"><a href="/edit">Edit...</a></li>
       </ul>
     </div>
 
