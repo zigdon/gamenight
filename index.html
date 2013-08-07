@@ -1,3 +1,4 @@
+{% autoescape true %}
 <html>
   <head>
     <title>Is there a game night this week?</title>
@@ -12,10 +13,18 @@
       </div>
     </div>
 
+    <div class="future">
+      <ul>
+        {% for gn in future %}
+          <li class="scheduled">{{ gn.date.strftime("%x") }} @ {{ gn.location }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
     <div class="footer">Updated: {{ updated }}<br/>
       Add to your calendar: <a href="http://www.google.com/calendar/ical/peeron.com_891c1b09588cjk5v1md00phups%40group.calendar.google.com/public/basic.ics">ICS file</a> <a href="http://www.google.com/calendar/embed?src=peeron.com_891c1b09588cjk5v1md00phups%40group.calendar.google.com&ctz=America/Los_Angeles">Google Calendar</a>
     </div>
 
   </body>
 </html>
-
+{% endautoescape %}

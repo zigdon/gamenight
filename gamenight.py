@@ -1,3 +1,4 @@
+import logging
 import os
 import urllib
 
@@ -5,6 +6,7 @@ from google.appengine.api import users
 
 import jinja2
 import webapp2
+
 
 from schema import GamenightNext, Gamenight, Application, User
 

@@ -20,6 +20,12 @@
     position: absolute;
     bottom: 0;
     color: gray;
+    font-size: 80%;
+}
+
+.footer a {
+    text-decoration: none;
+    color: #0000b0;
 }
 
 .msg {
@@ -28,3 +34,14 @@
     font-color: red;
 }
 
+.future {
+    font-size: 80%;
+    color: gray;
+    position: absolute;
+    right: 1%;
+    bottom: 0;
+}
+
+li {
+    list-style-type: none;
+}
