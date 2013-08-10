@@ -1,39 +1,20 @@
 from google.appengine.ext import ndb
 
-from datetime import datetime, timedelta, date, time
-
-class GamenightNext(ndb.Model):
-    """Coming week's gamenight details."""
-    gamenight = ndb.KeyProperty('g', kind='Gamenight')
-    status = ndb.StringProperty('s', choices=['Yes', 'Probably', 'No'])
-    date = ndb.DateTimeProperty('d')
-    location = ndb.StringProperty('l', indexed=False)
-    notes = ndb.StringProperty('n', indexed=False)
-    lastupdate = ndb.DateTimeProperty('u', auto_now=True)
-
-    @classmethod
-    def get(cls):
-        gamenight = cls.query().fetch(1)
-        if gamenight:
-            return gamenight[0]
-        else:
-            return None
-
-
+from datetime import datetime, timedelta, date, time, tzinfo
 
 class Gamenight(ndb.Model):
     """Gamenights that have been scheduled."""
     application = ndb.KeyProperty('a', kind='Application')
     event = ndb.StringProperty('e')
-    status = ndb.StringProperty('s', choices=['yes', 'probably', 'no'])
+    status = ndb.StringProperty('s', choices=['Yes', 'Probably', 'No'])
+    lastupdate = ndb.DateTimeProperty('u')
 
     # denormalized from Application for datastore efficiency
     date = ndb.DateTimeProperty('d')
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
-    priority = ndb.StringProperty('p', choices=['can', 'want', 'need'])
-    status = ndb.StringProperty('s', choices=['yes', 'probably', 'no'])
+    priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Insist'])
 
     @classmethod
     def future(cls, limit):
@@ -65,7 +46,7 @@ class Application(ndb.Model):
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
-    priority = ndb.StringProperty('p', choices=['can', 'want', 'need'])
+    priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Need'])
 
 
 class User(ndb.Model):
@@ -74,5 +55,32 @@ class User(ndb.Model):
     location = ndb.StringProperty('l', indexed=False)
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')
+
+
+class Pacific_tzinfo(tzinfo):
+    """Implementation of the Pacific timezone."""
+    def utcoffset(self, dt):
+        return timedelta(hours=-8) + self.dst(dt)
+
+    def _FirstSunday(self, dt):
+        """First Sunday on or after dt."""
+        return dt + timedelta(days=(6-dt.weekday()))
+
+    def dst(self, dt):
+        # 2 am on the second Sunday in March
+        dst_start = self._FirstSunday(datetime(dt.year, 3, 8, 2))
+        # 1 am on the first Sunday in November
+        dst_end = self._FirstSunday(datetime(dt.year, 11, 1, 1))
+
+        if dst_start <= dt.replace(tzinfo=None) < dst_end:
+            return timedelta(hours=1)
+        else:
+            return timedelta(hours=0)
+
+    def tzname(self, dt):
+        if self.dst(dt) == timedelta(hours=0):
+            return "PST"
+        else:
+            return "PDT"
 
 # vim: set ts=4 sts=4 sw=4 et:

@@ -7,10 +7,12 @@
     <body>
         <div class="center">
             <div class="answer">{{ status }}</div>
-            <div class="where">
-                {{ where }}
-                {{ when }}
-            </div>
+            {% if status == 'Yes' %}
+              <div class="where">
+                  {{ where }}
+                  {{ when }}
+              </div>
+            {% endif %}
         </div>
 
         <div class="future">

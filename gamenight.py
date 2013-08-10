@@ -8,7 +8,7 @@ import jinja2
 import webapp2
 
 
-from schema import GamenightNext, Gamenight, Application, User
+from schema import Gamenight, Application, User, Pacific_tzinfo
 
 from datetime import datetime
 
@@ -16,19 +16,31 @@ JINJA_ENVIRONMNT = jinja2.Environment(
   loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
   extensions=['jinja2.ext.autoescape'])
 
+PT = Pacific_tzinfo()
 
 class MainPage(webapp2.RequestHandler):
 
     def get(self):
         futurenights = Gamenight.future(10)
-        gamenight = GamenightNext.get()
-        if futurenights and futurenights[0].this_week():
-            futurenights = futurenights[1:]
 
+        if futurenights and futurenights[0].this_week():
+            # we have a gamenight scheduled for this week
+            gamenight = futurenights[0]
+            if len(futurenights) > 1:
+                futurenights = futurenights[1:]
+            else:
+                futurenights = None
+        else:
+            gamenight = Gamenight(status='No',
+                                  date=Utils.Saturday(),
+                                  lastupdate=Utils.Now())
+            gamenight.put()
+
+        updated = gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p')
         template_values = {
           'future': futurenights,
           'status': gamenight.status,
-          'updated': gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p'),
+          'updated': updated,
         }
 
         if gamenight.date:
@@ -88,6 +100,21 @@ class Utils:
                          notes=gn_schedule.notes)
         gn_next.put()
 
+    @classmethod
+    def Saturday(cls):
+        d = datetime.today().replace(hour=20, minute=0, second=0)
+        weekday = d.weekday()
+        if weekday == 6:
+            return d + timedelta(days=6)
+        elif weekday < 5:
+            return d + timedelta(days=5-weekday)
+        else:
+            return d
+
+    @classmethod
+    def Now(cls):
+        now = datetime.now()
+        return now + PT.utcoffset(now)
 
 application = webapp2.WSGIApplication([
     ('/', MainPage),
