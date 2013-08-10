@@ -7,7 +7,7 @@ class Gamenight(ndb.Model):
     """Gamenights that have been scheduled."""
     application = ndb.KeyProperty('a', kind='Application')
     event = ndb.StringProperty('e')
-    status = ndb.StringProperty('s', choices=['Yes', 'Probably', 'No'])
+    status = ndb.StringProperty('s', choices=['Yes', 'Probably', 'Maybe', 'No'])
     lastupdate = ndb.DateTimeProperty('u')
 
     # denormalized from Application for datastore efficiency
@@ -21,7 +21,7 @@ class Gamenight(ndb.Model):
     def schedule(cls):
         schedule = cls.future(1)
         if not schedule:
-            schedule = Gamenight(status='Probably',
+            schedule = Gamenight(status='Maybe',
                                  date=Utils.Saturday(),
                                  lastupdate=Utils.Now())
             schedule.put()
