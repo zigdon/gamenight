@@ -101,10 +101,12 @@
                     <tr><th>User</th><th>Name</th><th>Color</th><th>Admin</th></tr>
                     {% for user in users %}
                         <tr><td>{{ user.key.id() }}</td>
-                            <td><input type="text" value="{{ user.name }}" /></td>
-                            <td><input type="text" value="{{ user.color }}" /></td>
-                            <td><input type="checkbox"
-                                {% if user.admin %}checked{%endif%} /></td>
+                            <td><input type="text" name="name"
+                                       value="{{ user.name }}" /></td>
+                            <td><input type="text" name="color"
+                                       value="{{ user.color }}" /></td>
+                            <td><input type="checkbox" name="admin"
+                                {% if user.superuser %}checked{%endif%} /></td>
                         </tr>
                     {% endfor %}
                 </table>
