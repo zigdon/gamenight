@@ -25,7 +25,7 @@
             {% for gn in scheduled %}
                 <li><span class="date">{{ gn.date.strftime('%x') }}</span> -
                     <span class="status">{{ gn.status }}</span>
-                    {% if gn.status != 'No' %}
+                    {% if gn.status == 'Yes' %}
                         <span class="label">Where:</span>
                         <span class="location">{{ gn.location }}</span>
                         <span class="label">Host:</span>

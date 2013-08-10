@@ -22,13 +22,14 @@ class Gamenight(ndb.Model):
         schedule = cls.future(1)
         if not schedule:
             schedule = Gamenight(status='Probably',
+                                 date=Utils.Saturday(),
                                  lastupdate=Utils.Now())
             schedule.put()
         return schedule
 
     @classmethod
     def future(cls, limit):
-        return cls.query(cls.date > Utils.Now()).order(cls.date).fetch(limit)
+        return cls.query(cls.date >= Utils.Now()).order(cls.date).fetch(limit)
 
     @classmethod
     def this_week(cls):
