@@ -23,13 +23,17 @@
         <h1>Current Schedule</h1>
         <ul>
             {% for gn in scheduled %}
-                <li><span class="label">When:</span>
-                    <span class="date">{{ gn.date }}</span> @
-                    <span class="label">Where:</span>
-                    <span class="location">{{ gn.location }}</span>
-                    <span class="label">Host:</span>
-                    <span class="location">{{ gn.owner.get().name }}</span></br>
-                    <span class="notes">{{ gn.notes }}</span>
+                <li><span class="date">{{ gn.date.strftime('%x') }}</span> -
+                    <span class="status">{{ gn.status }}</span>
+                    {% if gn.status != 'No' %}
+                        <span class="label">Where:</span>
+                        <span class="location">{{ gn.location }}</span>
+                        <span class="label">Host:</span>
+                        <span class="location">{{ gn.owner.get().name }}</span></br>
+                    {% endif %}
+                    {% if gn.notes %}
+                        <span class="notes">{{ gn.notes }}</span>
+                    {% endif %}
                     {% if gn.owner == user or admin %}
                         <a href="/edit?gnid={{ gn.key.id() }}">Edit...</a>
                     {% endif %}
@@ -49,7 +53,9 @@
                         <span class="host">{{ app.owner.get().name }}</span>
                         <span class="label">Priority:</span>
                         <span class="priority">{{ app.priority }}</span></br>
-                        <span class="notes">{{ app.notes }}</span>
+                        {% if app.notes %}
+                            <span class="notes">{{ app.notes }}</span>
+                        {% endif %}
                         {% if app.owner == user or admin %}
                             <a href="/edit?appid={{ app.key.id() }}">Withdraw...</a>
                         {% endif %}
@@ -110,3 +116,5 @@
     </body>
 </html>
 {% endautoescape %}
+
+<!-- # vim: set ts=4 sts=4 sw=4 et: -->

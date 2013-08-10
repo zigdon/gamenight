@@ -17,10 +17,12 @@
 
         <div class="future">
             <ul>
-                {% for gn in future %}
-                    <li class="scheduled">{{ gn.date.strftime("%x") }}
-                      @ {{ gn.location }}</li>
-                {% endfor %}
+                {% if future %}
+                    {% for gn in future %}
+                        <li class="scheduled">{{ gn.date.strftime("%x") }}
+                          @ {{ gn.location }}</li>
+                    {% endfor %}
+                {% endif %}
             <li class="scheduled"><a href="/edit">Edit...</a></li>
             </ul>
         </div>
@@ -32,3 +34,5 @@
     </body>
 </html>
 {% endautoescape %}
+
+<!-- # vim: set ts=4 sts=4 sw=4 et: -->
