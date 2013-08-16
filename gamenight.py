@@ -69,14 +69,22 @@ class EditPage(webapp2.RequestHandler):
         user = User.get_or_insert(users.get_current_user().email())
 
         futurenights = Gamenight.future(100)
-        invitations = Invitation.query().order(Invitation.date).fetch(100)
+        if user.superuser:
+            invitations = Invitation.query()
+        else:
+            invitations = Invitation.query(Invitation.owner==user.key)
+        invitations = invitations.order(Invitation.date).iter()
+
+        summary = Invitation.summary()
+
         template_values.update({
             'scheduled': futurenights,
             'invitations': invitations,
+            'summary': summary,
             'logout': users.create_logout_url('/'),
             'user': user.key.id(),
             'admin': user.superuser,
-            'users': User.query().fetch(100),
+            'users': User.query().iter(),
         })
 
         template = JINJA_ENVIRONMNT.get_template('edit.html')

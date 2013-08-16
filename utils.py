@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, tzinfo
 class Utils:
     @classmethod
     def Saturday(cls):
+        """Return this week's saturday."""
         d = datetime.today().replace(hour=20, minute=0, second=0)
         weekday = d.weekday()
         if weekday == 6:
@@ -14,6 +15,7 @@ class Utils:
 
     @classmethod
     def Now(cls):
+        """Return current datetime, adjusted for timezone."""
         now = datetime.now()
         return now + Pacific_tzinfo().utcoffset(now)
 

@@ -42,6 +42,13 @@
 
         <h1>Invitations</h1>
         <ul>
+            {% for date, invites in summary.iteritems() %}
+                <li><span class="label">{{ date }}:</span>
+                    {{ invites }}
+                </li>
+            {% endfor %}
+        </ul>
+        <ul>
             {% for inv in invitations %}
                 <li><span class="label">When:</span>
                     <span class="date">{{ inv.date }}</span> @

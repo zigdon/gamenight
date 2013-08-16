@@ -1,7 +1,8 @@
-from google.appengine.ext import ndb
-
+from collections import defaultdict
 from datetime import timedelta, date
 from utils import Utils
+
+from google.appengine.ext import ndb
 
 class Gamenight(ndb.Model):
     """Gamenights that have been scheduled."""
@@ -52,6 +53,24 @@ class Invitation(ndb.Model):
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
     priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Need'])
+
+    @classmethod
+    def summary(cls):
+        """Get upcoming saturdays, and who has invited."""
+
+        invitations = cls.query(cls.date >= Utils.Now()).\
+                          filter(cls.date < Utils.Now() + timedelta(weeks=8)).\
+                          order(cls.date)
+
+        res = defaultdict(list)
+        for invite in invitations.iter():
+            res[invite.date.date()].append("%s (%s)" %
+                (invite.owner.get().name, invite.priority))
+
+        for date in res.keys():
+            res[date] = ", ".join(res[date])
+
+        return res
 
 
 class User(ndb.Model):
