@@ -52,7 +52,7 @@ class Invitation(ndb.Model):
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
-    priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Need'])
+    priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Insist'])
 
     @classmethod
     def summary(cls):
@@ -72,6 +72,25 @@ class Invitation(ndb.Model):
 
         return res
 
+    @classmethod
+    def create(cls, args):
+        invite = Invitation.query(Invitation.date == args['when']).\
+                            filter(Invitation.owner == args['owner']).get()
+
+        if invite:
+            invite.location = args['where']
+            invite.notes = args['notes']
+            invite.priority = args['priority']
+        else:
+            invite = Invitation(date = args['when'],
+                                owner = args['owner'],
+                                location = args['where'],
+                                notes = args['notes'],
+                                priority = args['priority'],
+                               )
+        invite.put()
+
+        return invite
 
 class User(ndb.Model):
     """Accounts of people who host."""

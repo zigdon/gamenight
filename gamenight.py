@@ -106,13 +106,9 @@ class EditPage(webapp2.RequestHandler):
                 self.get(template_values=args)
                 return
 
-            invite = Invitation(date = args['when'],
-                                owner = user.key,
-                                location = args['where'],
-                                notes = args['notes'],
-                                priority = args['priority'],
-                               )
-            invite.put()
+            args['owner'] = user.key
+
+            Invitation.create(args)
 
             self.get(template_values=args)
 
