@@ -41,50 +41,50 @@
         </ul>
 
         <h1>Invitations</h1>
-        <form method="post">
-            <ul>
-                {% for app in applications %}
-                    <li><span class="label">When:</span>
-                        <span class="date">{{ app.date }}</span> @
-                        <span class="label">Where:</span>
-                        <span class="location">{{ app.location }}</span>
-                        <span class="label">Host:</span>
-                        <span class="host">{{ app.owner.get().name }}</span>
-                        <span class="label">Priority:</span>
-                        <span class="priority">{{ app.priority }}</span></br>
-                        {% if app.notes %}
-                            <span class="notes">{{ app.notes }}</span>
-                        {% endif %}
-                        {% if app.owner == user or admin %}
-                            <a href="/edit?appid={{ app.key.id() }}">Withdraw...</a>
-                        {% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        </form>
-
-        Invite people over!<br />
         <ul>
-            <li><span class="label">When:</span>
-                <input type="text" name="when"
-                    value="{{ next_open }}" /></li>
-            <li><span class="label">Where:</span>
-                <input type="text" name="where"
-                    value="{{ default }}" /></li>
-            <li><span class="label">Priority:</span>
-                <select name="priority">
-                    <option>Can</option>
-                    <option>Want</option>
-                    <option>Insist</option>
-                </select></li>
-            <li><span class="label">Notes:</span>
-                <input type="text" name="notes" /></li>
+            {% for app in applications %}
+                <li><span class="label">When:</span>
+                    <span class="date">{{ app.date }}</span> @
+                    <span class="label">Where:</span>
+                    <span class="location">{{ app.location }}</span>
+                    <span class="label">Host:</span>
+                    <span class="host">{{ app.owner.get().name }}</span>
+                    <span class="label">Priority:</span>
+                    <span class="priority">{{ app.priority }}</span></br>
+                    {% if app.notes %}
+                        <span class="notes">{{ app.notes }}</span>
+                    {% endif %}
+                    {% if app.owner == user or admin %}
+                        <a href="/edit?appid={{ app.key.id() }}">Withdraw...</a>
+                    {% endif %}
+                </li>
+            {% endfor %}
         </ul>
 
-        <input type="submit" name="invite" value="Save"/>
+        Invite people over!<br />
+        <form method="post" action="/invite">
+            <ul>
+                <li><span class="label">When:</span>
+                    <input type="text" name="when"
+                        value="{{ next_open }}" /></li>
+                <li><span class="label">Where:</span>
+                    <input type="text" name="where"
+                        value="{{ default }}" /></li>
+                <li><span class="label">Priority:</span>
+                    <select name="priority">
+                        <option>Can</option>
+                        <option>Want</option>
+                        <option>Insist</option>
+                    </select></li>
+                <li><span class="label">Notes:</span>
+                    <input type="text" name="notes" /></li>
+            </ul>
+
+            <input type="submit" name="invite" value="Save"/>
+        </form>
 
         <h1>Preferences</h1>
-        <form method="post">
+        <form method="post" action="/preference">
             <ul>
                 <li><label>Default location:
                     <input type="text" name="default"
@@ -95,7 +95,7 @@
 
         {% if admin %}
             <h1>Users</h1>
-            <form method="post">
+            <form method="post" action="/users">
                 <table>
                     <tr><th>User</th><th>Name</th><th>Color</th><th>Admin</th></tr>
                     {% for user in users %}
