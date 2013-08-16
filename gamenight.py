@@ -1,24 +1,21 @@
+from datetime import datetime
+import jinja2
 import logging
 import os
 import urllib
-
-from google.appengine.api import users
-
-import jinja2
 import webapp2
 
+from google.appengine.api import users
 
 from schema import Gamenight, Application, User
 from utils import Utils
 
-from datetime import datetime
 
 JINJA_ENVIRONMNT = jinja2.Environment(
   loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
   extensions=['jinja2.ext.autoescape'])
 
 class MainPage(webapp2.RequestHandler):
-
     def get(self):
         futurenights = Gamenight.future(10)
 
@@ -51,9 +48,7 @@ class MainPage(webapp2.RequestHandler):
 
 
 class EditPage(webapp2.RequestHandler):
-
     def get(self):
-
         sys_user = users.get_current_user()
         if not sys_user:
             self.redirect(users.create_login_url(self.request.uri))
