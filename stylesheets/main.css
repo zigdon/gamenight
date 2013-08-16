@@ -50,3 +50,8 @@ a {
     font-weight: bold;
     color: gray;
 }
+
+.error {
+    background-color: #f08080;
+    border: 1px solid black;
+}

@@ -42,49 +42,56 @@
 
         <h1>Invitations</h1>
         <ul>
-            {% for app in applications %}
+            {% for inv in invitations %}
                 <li><span class="label">When:</span>
-                    <span class="date">{{ app.date }}</span> @
+                    <span class="date">{{ inv.date }}</span> @
                     <span class="label">Where:</span>
-                    <span class="location">{{ app.location }}</span>
+                    <span class="location">{{ inv.location }}</span>
                     <span class="label">Host:</span>
-                    <span class="host">{{ app.owner.get().name }}</span>
+                    <span class="host">{% if inv.owner %}
+                        {{ inv.owner.get().name }}
+                    {% else %}
+                        N/A
+                    {% endif %}</span>
                     <span class="label">Priority:</span>
-                    <span class="priority">{{ app.priority }}</span></br>
-                    {% if app.notes %}
-                        <span class="notes">{{ app.notes }}</span>
+                    <span class="priority">{{ inv.priority }}</span></br>
+                    {% if inv.notes %}
+                        <span class="notes">{{ inv.notes }}</span>
                     {% endif %}
-                    {% if app.owner == user or admin %}
-                        <a href="/edit?appid={{ app.key.id() }}">Withdraw...</a>
+                    {% if inv.owner == user or admin %}
+                        <a href="/edit?appid={{ inv.key.id() }}">Withdraw...</a>
                     {% endif %}
                 </li>
             {% endfor %}
         </ul>
 
         Invite people over!<br />
-        <form method="post" action="/invite">
+        {% if invite_errors %}
+            <span class="error">{{ invite_errors }}</span>
+        {% endif %}
+        <form method="post">
             <ul>
                 <li><span class="label">When:</span>
                     <input type="text" name="when"
-                        value="{{ next_open }}" /></li>
+                        value="{{ when }}" /></li>
                 <li><span class="label">Where:</span>
                     <input type="text" name="where"
-                        value="{{ default }}" /></li>
+                        value="{{ where }}" /></li>
                 <li><span class="label">Priority:</span>
                     <select name="priority">
-                        <option>Can</option>
-                        <option>Want</option>
-                        <option>Insist</option>
+                        <option {% if priority == 'Can' %}selected{% endif %}>Can</option>
+                        <option {% if priority == 'Want' %}selected{% endif %}>Want</option>
+                        <option {% if priority == 'Insist' %}selected{% endif %}>Insist</option>
                     </select></li>
                 <li><span class="label">Notes:</span>
-                    <input type="text" name="notes" /></li>
+                    <input type="text" name="notes" value="{{ notes }}" /></li>
             </ul>
 
             <input type="submit" name="invite" value="Save"/>
         </form>
 
         <h1>Preferences</h1>
-        <form method="post" action="/preference">
+        <form method="post">
             <ul>
                 <li><label>Default location:
                     <input type="text" name="default"
@@ -95,7 +102,7 @@
 
         {% if admin %}
             <h1>Users</h1>
-            <form method="post" action="/users">
+            <form method="post">
                 <table>
                     <tr><th>User</th><th>Name</th><th>Color</th><th>Admin</th></tr>
                     {% for user in users %}

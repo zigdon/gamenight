@@ -5,12 +5,12 @@ from utils import Utils
 
 class Gamenight(ndb.Model):
     """Gamenights that have been scheduled."""
-    application = ndb.KeyProperty('a', kind='Application')
+    invitation = ndb.KeyProperty('a', kind='Invitation')
     event = ndb.StringProperty('e')
     status = ndb.StringProperty('s', choices=['Yes', 'Probably', 'Maybe', 'No'])
     lastupdate = ndb.DateTimeProperty('u')
 
-    # denormalized from Application for datastore efficiency
+    # denormalized from invitation for datastore efficiency
     date = ndb.DateTimeProperty('d')
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
@@ -45,7 +45,7 @@ class Gamenight(ndb.Model):
         return self.date.date() - date.today() < timedelta(7)
 
 
-class Application(ndb.Model):
+class Invitation(ndb.Model):
     """Entries of offers to host."""
     date = ndb.DateTimeProperty('d')
     owner = ndb.KeyProperty('o', kind='User')
