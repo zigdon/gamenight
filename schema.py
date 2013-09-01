@@ -172,7 +172,8 @@ class Invitation(ndb.Model):
         gamenight = Gamenight.query(Gamenight.date==self.date).get()
 
         if gamenight and not overwrite:
-            return gamenight
+            if gamenight.status == 'Yes':
+                return gamenight
 
         if not gamenight:
             gamenight = Gamenight(date=self.date)
