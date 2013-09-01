@@ -127,13 +127,15 @@ class Invitation(ndb.Model):
                                  datetime.timedelta(weeks=8)).\
                           order(cls.date)
 
-        res = defaultdict(list)
+        res = {}
+        invlist = defaultdict(list)
         for invite in invitations.iter():
-            res[invite.date.date()].append(
+            invlist[invite.date].append(
                 (invite.owner.get().name, invite.priority))
 
-        for date in res.keys():
-            res[date] = ", ".join(res[date])
+        for date, invites in invlist.iteritems():
+            res[date] = ", ".join("%s (%s)" % (name, pri) for
+                                  name, pri in invites)
 
         return res
 
