@@ -1,5 +1,7 @@
 from collections import defaultdict
-from datetime import timedelta, date
+import datetime
+import logging
+import random
 from utils import Utils
 
 from google.appengine.ext import ndb
@@ -12,20 +14,23 @@ class Gamenight(ndb.Model):
     lastupdate = ndb.DateTimeProperty('u')
 
     # denormalized from invitation for datastore efficiency
-    date = ndb.DateTimeProperty('d')
+    date = ndb.DateProperty('d')
+    time = ndb.TimeProperty('t')
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
-    priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Insist'])
 
     @classmethod
-    def schedule(cls):
-        schedule = cls.future(1)
-        if not schedule:
-            schedule = Gamenight(status='Maybe',
-                                 date=Utils.Saturday(),
-                                 lastupdate=Utils.Now())
-            schedule.put()
+    def schedule(cls, date=None):
+        if date is None:
+            date = Utils.Saturday()
+
+        schedule = cls.query(cls.date==date).get() or \
+                   Invitation.resolve(when=date) or \
+                   Gamenight(status='Maybe',
+                             date=Utils.Saturday(),
+                             lastupdate=Utils.Now())
+        schedule.put()
         return schedule
 
     @classmethod
@@ -43,28 +48,88 @@ class Gamenight(ndb.Model):
             return None
 
     def is_this_week(self):
-        return self.date.date() - date.today() < timedelta(7)
+        return self.date - datetime.date.today() < datetime.timedelta(7)
 
 
 class Invitation(ndb.Model):
     """Entries of offers to host."""
-    date = ndb.DateTimeProperty('d')
+    date = ndb.DateProperty('d')
+    time = ndb.TimeProperty('t')
     owner = ndb.KeyProperty('o', kind='User')
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
     priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Insist'])
 
     @classmethod
+    def resolve(cls, when=None, history=4):
+        """Figure out where GN should be at the given date.
+
+        By default, consider the last 4 to give preference to people who
+        haven't been hosting."""
+
+        if type(when) != datetime.date:
+            when = when.date()
+
+        invitations = cls.query(cls.date == when)
+        logging.debug('Query: %r' % invitations)
+
+        candidates = []
+        # check each level separately
+        for pri in ('Insist', 'Want', 'Can'):
+            candidates = dict([(x.owner.id(), x) for x in
+                    invitations.filter(cls.priority == pri).fetch()])
+
+            # no matches at this priority
+            if not candidates:
+                logging.debug('none at priority %s' % pri)
+                continue
+
+            # no need to look at lower levels
+            logging.debug('Candidates(%s): %r' % (pri, candidates))
+            break
+
+        # no one wants to host :(
+        if not candidates:
+            logging.debug("none found.")
+            return None
+
+        # more than one option, filter out the recent hosts until we run out of
+        # recent hosts, or have just one option left.
+        logging.debug('Candidates: %r' % candidates.keys())
+        if len(candidates) > 1:
+            if history:
+                old_nights = Gamenight.query(Gamenight.date < Utils.Now()).\
+                                 order(Gamenight.date).fetch(history)
+                while old_nights and len(candidates) > 1:
+                    owner = old_nights.pop().owner.id()
+                    if owner in candidates:
+                        logging.debug('removing previous host %s' % owner)
+                        del candidates[owner]
+
+        logging.debug('Not recent candidates: %r' % candidates.keys())
+
+        # pick one at random, return the invitation object
+        selected = random.choice(candidates.keys())
+        logging.debug('Selected invitation: %s\n%r' %
+                      (selected, candidates[selected]))
+
+        return candidates[selected].make_gamenight()
+
+    @classmethod
     def summary(cls):
-        """Get upcoming saturdays, and who has invited."""
+        """Get upcoming saturdays, and who has invited.
+
+        Returns a dictionary of dates, with a list of (who, priority) for each.
+        """
 
         invitations = cls.query(cls.date >= Utils.Now()).\
-                          filter(cls.date < Utils.Now() + timedelta(weeks=8)).\
+                          filter(cls.date < Utils.Now() +
+                                 datetime.timedelta(weeks=8)).\
                           order(cls.date)
 
         res = defaultdict(list)
         for invite in invitations.iter():
-            res[invite.date.date()].append("%s (%s)" %
+            res[invite.date.date()].append(
                 (invite.owner.get().name, invite.priority))
 
         for date in res.keys():
@@ -74,6 +139,10 @@ class Invitation(ndb.Model):
 
     @classmethod
     def create(cls, args):
+        """Create or update an invitation.
+
+        Any given owner can have just invite per date."""
+
         invite = Invitation.query(Invitation.date == args['when']).\
                             filter(Invitation.owner == args['owner']).get()
 
@@ -91,6 +160,32 @@ class Invitation(ndb.Model):
         invite.put()
 
         return invite
+
+    def make_gamenight(self, overwrite=False):
+        """Create an unsaved gamenight object from an invitation.
+
+        Args:
+            overwrite - if an existing GN is already scheduled, replace it. If
+                        false, return it unchanged.
+        """
+
+        gamenight = Gamenight.query(Gamenight.date==self.date).get()
+
+        if gamenight and not overwrite:
+            return gamenight
+
+        if not gamenight:
+            gamenight = Gamenight(date=self.date)
+
+        gamenight.invitation = self.key
+        gamenight.status = 'Yes'
+        gamenight.lastupdate = Utils.Now()
+        gamenight.time = self.time
+        gamenight.owner = self.owner
+        gamenight.location = self.location
+        gamenight.notes = self.notes
+
+        return gamenight
 
 class User(ndb.Model):
     """Accounts of people who host."""
