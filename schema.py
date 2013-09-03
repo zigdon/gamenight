@@ -70,6 +70,9 @@ class Invitation(ndb.Model):
 
     datetext = ndb.ComputedProperty(text_date)
 
+    @classmethod
+    def get(cls, key):
+        return ndb.Key(cls, int(key)).get()
 
     @classmethod
     def resolve(cls, when=None, history=4):

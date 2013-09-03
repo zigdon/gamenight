@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Offer to host gamenight{% endblock %}
 {% block content %}
+<form method="post">
     <div class="row-fluid">
         <div class="span6">
-            <form method="post">
                 <fieldset>
                      <legend>Invite Gamenight</legend>
                      <label for="when">When</label>
@@ -24,7 +24,6 @@
                      <span class="help-block">How important is it for you to host this time?</span>
                      <button type="submit" class="btn">Submit</button>
                 </fieldset>
-            </form>
         </div>
         <div class="span6">
             {% if invitations %}
@@ -32,6 +31,7 @@
                 <ol>
                     {% for invite in invitations %}
                         <li>
+                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ invite.key.id() }}">x</button>
                             {% if user.superuser %}
                                 {{ invite.owner.get().name }} -
                             {% endif %}
@@ -46,4 +46,5 @@
             {% endif %}
         </div>
     </div>
+</form>
 {% endblock %}

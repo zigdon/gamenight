@@ -118,6 +118,31 @@ class InvitePage(webapp2.RequestHandler):
     @logged_in
     def post(self, template_values={}):
         user = User.get_or_insert(users.get_current_user().email())
+
+        if self.request.get('withdraw'):
+            invite = Invitation.get(self.request.get('withdraw'))
+            if not invite:
+                self.get(error="Can't find this invitation.")
+                return
+
+            if invite.owner != user.key and not user.superuser:
+                self.get(error="Not your invitation.")
+                return
+
+            msg = ''
+            gn = Gamenight.query(Gamenight.invitation==invite.key).get()
+            if gn:
+                gn.key.delete()
+                msg = 'Rescheduling gamenight. '
+                # TODO: actually reschedule the gn
+
+            invite.key.delete()
+            msg += 'Invitation withdrawn.'
+
+            self.get(msg=msg)
+            return
+
+
         args = {}
         for k in ['when', 'where', 'priority', 'notes']:
             args[k] = self.request.get(k)
