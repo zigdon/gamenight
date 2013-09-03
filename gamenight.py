@@ -21,13 +21,13 @@ JINJA_ENVIRONMNT = jinja2.Environment(
   extensions=['jinja2.ext.autoescape'])
 
 def logged_in(func):
-    def dec(self, template_values={}):
+    def dec(self, **kwargs):
         sys_user = users.get_current_user()
         if not sys_user:
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        return func(self, template_values=template_values)
+        return func(self, **kwargs)
     return dec
 
 
@@ -90,40 +90,66 @@ class EditPage(webapp2.RequestHandler):
         template = JINJA_ENVIRONMNT.get_template('edit.html')
         self.response.write(template.render(template_values))
 
-    @logged_in
-    def post(self, template_values={}):
-        user = User.get_or_insert(users.get_current_user().email())
-        if self.request.get('invite', False):
-            args = {}
-            for k in ['when', 'where', 'priority', 'notes']:
-                args[k] = self.request.get(k)
-
-            try:
-                args['when'] = parser.parse(args['when'])
-            except ValueError:
-                args['invite_errors'] = \
-                    'Not sure what you mean by "%s"' % args['when']
-                self.get(template_values=args)
-                return
-
-            args['owner'] = user.key
-
-            Invitation.create(args)
-
-            self.get(template_values=args)
-
 
 class InvitePage(webapp2.RequestHandler):
     @logged_in
-    def get(self, template_values={}):
+    def get(self, template_values={}, msg=None, error=None):
         user = User.get_or_insert(users.get_current_user().email())
+
+        if user.superuser:
+            invitations = Invitation.query()
+        else:
+            invitations = Invitation.query(Invitation.owner==user.key)
+        invitations = invitations\
+                      .filter(Invitation.date >= Utils.Now())\
+                      .order(Invitation.date).iter()
 
         template_values.update({
             'user': user,
+            'msg': msg,
+            'error': error,
+            'invitations': invitations,
+            'logout': users.create_logout_url('/'),
         })
 
         template = JINJA_ENVIRONMNT.get_template('invite.html')
         self.response.write(template.render(template_values))
+
+    @logged_in
+    def post(self, template_values={}):
+        user = User.get_or_insert(users.get_current_user().email())
+        args = {}
+        for k in ['when', 'where', 'priority', 'notes']:
+            args[k] = self.request.get(k)
+
+        error = None
+        if args['when']:
+            try:
+                args['when'] = parser.parse(args['when'])
+            except ValueError:
+                error = 'Not sure what you mean by "%s"' % args['when']
+        else:
+            error = 'When do you want to host?'
+
+        if error:
+            self.get(template_values=args, error=error)
+            return
+
+        if not args['where']:
+            error = 'Where do you want to host?'
+            self.get(template_values=args, error=error)
+            return
+
+        if not args['priority']:
+            error = '''Gotta have a priority. Also, don't mess with me.'''
+            self.get(template_values=args, error=error)
+            return
+
+        args['owner'] = user.key
+
+        Invitation.create(args)
+
+        self.get(msg="Invitation created!")
 
 
 application = webapp2.WSGIApplication([

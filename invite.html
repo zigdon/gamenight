@@ -3,14 +3,17 @@
 {% block content %}
     <div class="row-fluid">
         <div class="span6">
-            <form>
+            <form method="post">
                 <fieldset>
                      <legend>Invite Gamenight</legend>
-                     <label for="when">When</label><input id="when" name="when" type="text" />
+                     <label for="when">When</label>
+                     <input id="when" name="when" type="text" value="{{ when }}" />
                      <span class="help-block">Date and time.</span>
-                     <label for="where">Where</label><input id="where" name="where" type="text" />
+                     <label for="where">Where</label>
+                     <input id="where" name="where" type="text" value="{{ where }}" />
                      <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
-                     <label for="notes">Notes</label><input id="notes" name="notes" type="text" />
+                     <label for="notes">Notes</label>
+                     <input id="notes" name="notes" type="text" />
                      <span class="help-block">Anything else you'd like to tell us.</span>
                      <label for="priority">Priority</label>
                          <select name="priority" id="priority">
@@ -29,10 +32,13 @@
                 <ol>
                     {% for invite in invitations %}
                         <li>
-                            {{ invite.date }} {{ invite.time }} @
+                            {% if user.superuser %}
+                                {{ invite.owner.get().name }} -
+                            {% endif %}
+                            {{ invite.datetext }} @
                             {{ invite.location }} ({{ invite.priority }}).
                             {% if invite.notes %}
-                                <br />{{ invite.notes }}
+                                <br /><small>{{ invite.notes }}</small>
                             {% endif %}
                         </li>
                     {% endfor %}

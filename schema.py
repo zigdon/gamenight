@@ -60,6 +60,17 @@ class Invitation(ndb.Model):
     notes = ndb.StringProperty('n', indexed=False)
     priority = ndb.StringProperty('p', choices=['Can', 'Want', 'Insist'])
 
+    def text_date(self):
+        date = datetime.datetime.combine(self.date, self.time)
+        if self.date == datetime.date.today():
+            return self.time.strftime('Today, %I:%M %p')
+        if Utils.Now() - date < datetime.timedelta(6):
+            return self.time.strftime('Saturday, %I:%M %p')
+        return date.strftime('%b %d, %I:%M %p')
+
+    datetext = ndb.ComputedProperty(text_date)
+
+
     @classmethod
     def resolve(cls, when=None, history=4):
         """Figure out where GN should be at the given date.
@@ -153,7 +164,8 @@ class Invitation(ndb.Model):
             invite.notes = args['notes']
             invite.priority = args['priority']
         else:
-            invite = Invitation(date = args['when'],
+            invite = Invitation(date = args['when'].date(),
+                                time = args['when'].time(),
                                 owner = args['owner'],
                                 location = args['where'],
                                 notes = args['notes'],
