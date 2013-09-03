@@ -20,6 +20,17 @@ JINJA_ENVIRONMNT = jinja2.Environment(
   loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
   extensions=['jinja2.ext.autoescape'])
 
+def logged_in(func):
+    def dec(self, template_values={}):
+        sys_user = users.get_current_user()
+        if not sys_user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        return func(self, template_values=template_values)
+    return dec
+
+
 class MainPage(webapp2.RequestHandler):
     def get(self):
         futurenights = Gamenight.future(10)
@@ -53,17 +64,6 @@ class MainPage(webapp2.RequestHandler):
 
 
 class EditPage(webapp2.RequestHandler):
-    def logged_in(func):
-        def dec(self, template_values={}):
-            sys_user = users.get_current_user()
-            if not sys_user:
-                self.redirect(users.create_login_url(self.request.uri))
-                return
-
-            return func(self, template_values=template_values)
-        return dec
-
-
     @logged_in
     def get(self, template_values={}):
         user = User.get_or_insert(users.get_current_user().email())
@@ -113,10 +113,23 @@ class EditPage(webapp2.RequestHandler):
             self.get(template_values=args)
 
 
+class InvitePage(webapp2.RequestHandler):
+    @logged_in
+    def get(self, template_values={}):
+        user = User.get_or_insert(users.get_current_user().email())
+
+        template_values.update({
+            'user': user.name or user.email,
+        })
+
+        template = JINJA_ENVIRONMNT.get_template('invite.html')
+        self.response.write(template.render(template_values))
+
+
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/edit', EditPage),
-    ('/invite', EditPage),
+    ('/invite', InvitePage),
 ], debug=True)
 
 # vim: set ts=4 sts=4 sw=4 et:
