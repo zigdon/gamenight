@@ -119,7 +119,7 @@ class InvitePage(webapp2.RequestHandler):
         user = User.get_or_insert(users.get_current_user().email())
 
         template_values.update({
-            'user': user.name or user.email,
+            'user': user,
         })
 
         template = JINJA_ENVIRONMNT.get_template('invite.html')
