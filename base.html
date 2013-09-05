@@ -20,8 +20,10 @@
                         <div class="nav-collapse collapse navbar-responsive-collapse">
                             <ul class="nav">
                                     <li><a href="/">Home</a></li>
-                                    <li class="active"><a href="/invite">Invitations</a></li>
-                                    <li><a href="#">Schedule</a></li><br />
+                                    <li {% if tab == 'invite' %}class="active"{% endif %}>
+                                        <a href="/invite">Invitations</a></li>
+                                    <li {% if tab == 'schedule' %}class="active"{% endif %}>
+                                        <a href="/schedule">Schedule</a></li><br />
                                 </ul>
                                 <ul class="nav pull-right">
                                     {% if user.superuser %}

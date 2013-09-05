@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% set tab = 'schedule' %}
+{% block title %}Upcoming gamenight{% endblock %}
+{% block content %}
+<div class="row-fluid">
+    <div class="span12">
+        {% for day in days %}
+            <div class="row-fluid">
+                <div class="span12">
+                    <h3 class="muted"> {{ day.date }} </h3>
+                    <ul>
+                        {% if day.scheduled %}
+                            <li class="scheduled">
+                                {{ day.owner.get().name }}: {{ day.time }} @ {{ day.where }}
+                            </li>
+                        {% endif %}
+                        {% for invite in day.invitations %}
+                            <li>
+                                {{ invite.owner.get().name }} @
+                                {{ invite.location }}
+                                ({{ invite.priority }})
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+{# vim: set ts=4 sts=4 sw=4 et: #}

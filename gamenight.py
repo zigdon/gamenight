@@ -2,6 +2,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
 
+from collections import defaultdict
 from datetime import datetime
 from dateutil import parser
 import jinja2
@@ -62,6 +63,38 @@ class MainPage(webapp2.RequestHandler):
         # Write the submission form and the footer of the page
         self.response.write(template.render(template_values))
 
+
+class SchedulePage(webapp2.RequestHandler):
+    def get(self):
+        days = defaultdict(dict)
+        for gn in Gamenight.future(10):
+            days[gn.date]['date'] = gn.date
+            days[gn.date]['scheduled'] = True
+            days[gn.date]['owner'] = gn.owner
+            days[gn.date]['time'] = gn.time
+            days[gn.date]['where'] = gn.location
+
+        invitations = Invitation.query(Invitation.date >= Utils.Now()).\
+                          order(Invitation.date).iter()
+        for invite in invitations:
+            if not days[invite.date].get('invitations'):
+                days[invite.date]['date'] = invite.date
+                days[invite.date]['invitations'] = []
+
+            days[invite.date]['invitations'].append(invite)
+
+        day_sorter = lambda x: x.get('date')
+        template_values = { 'days': sorted(days.values(), key=day_sorter) }
+        current_user = users.get_current_user()
+        if current_user:
+            user = User.get_or_insert(users.get_current_user().email())
+            template_values.update({
+                'logout': users.create_logout_url('/'),
+                'user': user,
+            })
+
+        template = JINJA_ENVIRONMNT.get_template('schedule.html')
+        self.response.write(template.render(template_values))
 
 class EditPage(webapp2.RequestHandler):
     @logged_in
@@ -185,6 +218,7 @@ application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/edit', EditPage),
     ('/invite', InvitePage),
+    ('/schedule', SchedulePage),
 ], debug=True)
 
 # vim: set ts=4 sts=4 sw=4 et:
