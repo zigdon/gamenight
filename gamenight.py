@@ -97,9 +97,10 @@ class InvitePage(webapp2.RequestHandler):
         user = User.get_or_insert(users.get_current_user().email())
 
         if user.superuser:
-            invitations = Invitation.query()
+            invitations = Invitation.query(ancestor=Invitation.dummy())
         else:
-            invitations = Invitation.query(Invitation.owner==user.key)
+            invitations = Invitation.query(Invitation.owner==user.key,
+                                           ancestor=Invitation.dummy())
         invitations = invitations\
                       .filter(Invitation.date >= Utils.Now())\
                       .order(Invitation.date).iter()
@@ -172,9 +173,12 @@ class InvitePage(webapp2.RequestHandler):
 
         args['owner'] = user.key
 
-        Invitation.create(args)
+        updated = Invitation.create(args)
 
-        self.get(msg="Invitation created!")
+        if updated:
+            self.get(msg="Invitation updated!")
+        else:
+            self.get(msg="Invitation created!")
 
 
 application = webapp2.WSGIApplication([

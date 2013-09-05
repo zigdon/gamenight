@@ -64,7 +64,7 @@ class Invitation(ndb.Model):
         date = datetime.datetime.combine(self.date, self.time)
         if self.date == datetime.date.today():
             return self.time.strftime('Today, %I:%M %p')
-        if Utils.Now() - date < datetime.timedelta(6):
+        if date - Utils.Now() < datetime.timedelta(6):
             return self.time.strftime('Saturday, %I:%M %p')
         return date.strftime('%b %d, %I:%M %p')
 
@@ -73,6 +73,10 @@ class Invitation(ndb.Model):
     @classmethod
     def get(cls, key):
         return ndb.Key(cls, int(key)).get()
+
+    @classmethod
+    def dummy(cls):
+        return ndb.Key(cls, 'root')
 
     @classmethod
     def resolve(cls, when=None, history=4):
@@ -166,6 +170,7 @@ class Invitation(ndb.Model):
             invite.location = args['where']
             invite.notes = args['notes']
             invite.priority = args['priority']
+            updated = True
         else:
             invite = Invitation(date = args['when'].date(),
                                 time = args['when'].time(),
@@ -173,10 +178,12 @@ class Invitation(ndb.Model):
                                 location = args['where'],
                                 notes = args['notes'],
                                 priority = args['priority'],
+                                parent = Invitation.dummy(),
                                )
-        invite.put()
+            updated = False
+        ndb.transaction(lambda: invite.put())
 
-        return invite
+        return updated
 
     def make_gamenight(self, overwrite=False):
         """Create an unsaved gamenight object from an invitation.
