@@ -242,10 +242,43 @@ class InvitePage(webapp2.RequestHandler):
             self.get(msg="Invitation created!")
 
 
+class ProfilePage(webapp2.RequestHandler):
+    @logged_in
+    def get(self, template_values={}, msg=None, error=None):
+        user = User.get_or_insert(users.get_current_user().email())
+
+        template_values.update({
+            'user': user,
+            'msg': msg,
+            'error': error,
+        })
+
+        if not user.superuser or not template_values.has_key('profile'):
+            template_values['profile'] = user
+
+        template = JINJA_ENVIRONMNT.get_template('profile.html')
+        self.response.write(template.render(template_values))
+
+    @logged_in
+    def post(self):
+        user = User.get_or_insert(users.get_current_user().email())
+
+        if user.superuser:
+            profile = User.get(self.request.get('pid'))
+        else:
+            profile = user
+
+        profile.location = self.request.get('location')
+        profile.name = self.request.get('name')
+        profile.put()
+
+        self.get(msg="Profile updated!")
+
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/edit', EditPage),
     ('/invite', InvitePage),
+    ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
 ], debug=True)
 

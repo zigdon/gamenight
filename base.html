@@ -30,11 +30,11 @@
                                         <li><a href="#">Admin</a></li>
                                     {% endif %}
                                     <li class="divider-vertical"></li>
-                                    <li class="dropdown">
+                                    <li class="dropdown{% if tab == 'profile' %} active{% endif %}">
                                          <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ user.name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="#">Profile</a>
+                                                <a href="/profile">Profile</a>
                                             </li>
                                             <li>
                                                 <a href="{{ logout }}">Log out</a>

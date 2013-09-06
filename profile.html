@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set tab = 'profile' %}
+{% block title %}Offer to host gamenight{% endblock %}
+{% block content %}
+<form method="post">
+    <div class="row-fluid">
+        <div class="span6">
+            <fieldset>
+                <legend>Profile{% if user.superuser %}: {{ profile.email }}{% endif %}</legend>
+                <label for="name">Name</label>
+                <input id="name" name="name" type="text" value="{{ profile.name }}" />
+                <label for="location">Default location</label>
+                <input id="location" name="location" type="text" value="{{ profile.location }}" />
+                <br />
+                <input type="hidden" id="pid" name="pid" value="{{ profile.key.id() }}" />
+                <button type="submit" class="btn">Save</button>
+            </fieldset>
+        </div>
+        <div class="span6">
+        </div>
+    </div>
+</form>
+{% endblock %}
+{# vim: set ts=4 sts=4 sw=4 et: #}
