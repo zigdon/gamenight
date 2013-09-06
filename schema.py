@@ -72,7 +72,7 @@ class Invitation(ndb.Model):
 
     @classmethod
     def get(cls, key):
-        return ndb.Key(cls, int(key)).get()
+        return ndb.Key(cls, 'root', cls, int(key)).get()
 
     @classmethod
     def dummy(cls):
