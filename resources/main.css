@@ -54,3 +54,12 @@ a {
     background-color: #f08080;
     border: 1px solid black;
 }
+
+.scheduled {
+    font-weight: bold;
+    color: green;
+}
+
+.missing {
+    color: red;
+}

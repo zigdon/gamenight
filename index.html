@@ -19,9 +19,18 @@
         <div class="future">
             <ul>
                 {% if future %}
-                    {% for gn in future %}
-                        <li class="scheduled">{{ gn.date.strftime("%x") }}
-                          @ {{ gn.location }}</li>
+                    {% for day in future %}
+                        {% if day.type == "gamenight" %}
+                            <li class="scheduled">{{ day.date.strftime("%x") }}
+                              @ {{ day.location }}.</li>
+                        {% elif day.type == "invites" %}
+                            <li>{{ day.date.strftime("%x") }}:
+                                {{ day.invitations }}.
+                            </li>
+                        {% else %}
+                            <li>{{ day.date.strftime("%x") }}:
+                                <span class="missing">None yet.</span></li>
+                        {% endif %}
                     {% endfor %}
                 {% endif %}
             <li class="scheduled"><a href="/invite">Invite...</a></li>

@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
 
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser
 import jinja2
 import logging
@@ -15,7 +15,6 @@ from google.appengine.api import users
 
 from schema import Gamenight, Invitation, User
 from utils import Utils
-
 
 JINJA_ENVIRONMNT = jinja2.Environment(
   loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
@@ -42,13 +41,39 @@ class MainPage(webapp2.RequestHandler):
             if len(futurenights) > 1:
                 futurenights = futurenights[1:]
             else:
-                futurenights = None
+                futurenights = []
         else:
-            gamenight = Gamenight.schedule()
+            gamenight = Gamenight(status='Probably',
+                             date=Utils.Saturday(),
+                             lastupdate=Utils.Now())
+            futurenights = []
 
         updated = gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p')
+
+        invites = Invitation.summary()
+
+        upcoming = {g.date: { 'type': 'gamenight',
+                              'date': g.date,
+                              'location': g.location }
+                            for g in futurenights}
+        for week in range(1,5):
+            day = (Utils.Saturday() + timedelta(week*7)).date()
+
+            # skip days we already have a confirmed GN
+            if upcoming.get(day, False):
+                continue
+
+            summary = invites.get(day, False)
+            if summary:
+                upcoming[day] = { 'type': 'invites',
+                                  'date': day,
+                                  'invitations': summary }
+                continue
+
+            upcoming[day] = { 'date': day }
+
         template_values = {
-          'future': futurenights,
+          'future': sorted(upcoming.values(), key=lambda x: x['date']),
           'status': gamenight.status,
           'updated': updated,
         }
