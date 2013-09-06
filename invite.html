@@ -8,10 +8,12 @@
                 <fieldset>
                      <legend>Invite Gamenight</legend>
                      <label for="when">When</label>
-                     <input id="when" name="when" type="datetime-local" value="{{ when }}" />
+                     <input id="when" name="when" type="text" 
+                            placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ when }}" />
                      <span class="help-block">Date and time.</span>
                      <label for="where">Where</label>
-                     <input id="where" name="where" type="text" value="{{ where }}" />
+                     <input id="where" name="where" type="text" 
+                            placeholder="My house" value="{{ where }}" />
                      <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
                      <label for="notes">Notes</label>
                      <input id="notes" name="notes" type="text" />
