@@ -171,6 +171,9 @@ class InvitePage(webapp2.RequestHandler):
             'logout': users.create_logout_url('/'),
         })
 
+        if not template_values.has_key('where') and user.location:
+            template_values['where'] = user.location
+
         template = JINJA_ENVIRONMNT.get_template('invite.html')
         self.response.write(template.render(template_values))
 

@@ -5,28 +5,28 @@
 <form method="post">
     <div class="row-fluid">
         <div class="span6">
-                <fieldset>
-                     <legend>Invite Gamenight</legend>
-                     <label for="when">When</label>
-                     <input id="when" name="when" type="text" 
-                            placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ when }}" />
-                     <span class="help-block">Date and time.</span>
-                     <label for="where">Where</label>
-                     <input id="where" name="where" type="text" 
-                            placeholder="My house" value="{{ where }}" />
-                     <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
-                     <label for="notes">Notes</label>
-                     <input id="notes" name="notes" type="text" />
-                     <span class="help-block">Anything else you'd like to tell us.</span>
-                     <label for="priority">Priority</label>
-                         <select name="priority" id="priority">
-                             <option selected>Can</option>
-                             <option>Want</option>
-                             <option>Insist</option>
-                         </select></li>
-                     <span class="help-block">How important is it for you to host this time?</span>
-                     <button type="submit" class="btn">Submit</button>
-                </fieldset>
+            <fieldset>
+                 <legend>Invite Gamenight</legend>
+                 <label for="when">When</label>
+                 <input id="when" name="when" type="text" 
+                        placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ when }}" />
+                 <span class="help-block">Date and time.</span>
+                 <label for="where">Where</label>
+                 <input id="where" name="where" type="text" 
+                        placeholder="My house" value="{{ where }}" />
+                 <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
+                 <label for="notes">Notes</label>
+                 <input id="notes" name="notes" type="text" />
+                 <span class="help-block">Anything else you'd like to tell us.</span>
+                 <label for="priority">Priority</label>
+                     <select name="priority" id="priority">
+                         <option selected>Can</option>
+                         <option>Want</option>
+                         <option>Insist</option>
+                     </select></li>
+                 <span class="help-block">How important is it for you to host this time?</span>
+                 <button type="submit" class="btn">Submit</button>
+            </fieldset>
         </div>
         <div class="span6">
             {% if invitations %}
