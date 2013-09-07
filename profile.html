@@ -11,6 +11,10 @@
                 <input id="name" name="name" type="text" value="{{ profile.name }}" />
                 <label for="location">Default location</label>
                 <input id="location" name="location" type="text" value="{{ profile.location }}" />
+                <label for="location">Get email if gamenight needs scheduling?</label>
+                <input type="checkbox" name="nag" id="nag" {% if profile.nag %} checked="checked" {% endif %} />
+                    Get nag email
+                </label>
                 <br />
                 {% if user.superuser %}
                     <input type="hidden" id="pid" name="pid" value="{{ profile.key.id() }}" />

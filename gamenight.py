@@ -11,7 +11,7 @@ import os
 import urllib
 import webapp2
 
-from google.appengine.api import users
+from google.appengine.api import mail, users
 
 from schema import Gamenight, Invitation, User
 from utils import Utils
@@ -285,6 +285,7 @@ class ProfilePage(webapp2.RequestHandler):
 
         profile.location = self.request.get('location')
         profile.name = self.request.get('name')
+        profile.nag = self.request.get('nag')=='on'
         profile.put()
 
         self.get(msg="Profile updated!", profile=profile.key.id())
@@ -294,6 +295,30 @@ class ProfilePage(webapp2.RequestHandler):
 class ResetTask(webapp2.RequestHandler):
     def get(self):
         Gamenight.schedule()
+
+
+class NagTask(webapp2.RequestHandler):
+    def get(self):
+        gn = Gamenight.schedule(fallback='Maybe')
+        if gn.status != 'Yes':
+            message = mail.EmailMessage()
+            message.sender = 'Gamenight <dan@peeron.com>'
+            message.to = message.sender
+            message.subject = 'Want to host gamenight?'
+            message.body ="""
+Seems that no one has offered to host gamenight this week. Want to host? Go to
+http://TBD/invite!
+
+Thanks!
+
+(You asked to get these emails if no one is hosting by Tuesday morning. If you
+want to stop getting these, go to http://TBD/profile and uncheck the 'nag
+emails' option.)
+"""
+
+            message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
+            logging.info('Sending nag email to %r', message.to)
+            message.send()
 
 
 debug = True
@@ -307,6 +332,7 @@ application = webapp2.WSGIApplication([
 
 cron = webapp2.WSGIApplication([
     ('/tasks/reset', ResetTask),
+    ('/tasks/nag', NagTask),
 ], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:

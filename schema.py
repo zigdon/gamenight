@@ -27,6 +27,7 @@ class Gamenight(ndb.Model):
 
         schedule = cls.query(cls.date==date).filter(cls.status=='Yes').get() or \
                    Invitation.resolve(when=date) or \
+                   cls.query(cls.date==date).get() or \
                    Gamenight(status=fallback,
                              date=date,
                              lastupdate=Utils.Now())
@@ -224,6 +225,7 @@ class User(ndb.Model):
     location = ndb.StringProperty('l', indexed=False)
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')
+    nag = ndb.BooleanProperty('e')
 
     def validate(prop, name):
         print "prop: %r, name: %r" % (prop, name)

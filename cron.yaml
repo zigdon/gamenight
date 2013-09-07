@@ -3,3 +3,7 @@ cron:
   url: /tasks/reset
   schedule: every sunday 03:00
   timezone: America/Los_Angeles
+- description: Nag
+  url: /tasks/nag
+  schedule: every tuesday 10:00
+  timezone: America/Los_Angeles
