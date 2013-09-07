@@ -289,12 +289,24 @@ class ProfilePage(webapp2.RequestHandler):
 
         self.get(msg="Profile updated!", profile=profile.key.id())
 
+
+# tasks
+class ResetTask(webapp2.RequestHandler):
+    def get(self):
+        Gamenight.schedule()
+
+
+debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/edit', EditPage),
     ('/invite', InvitePage),
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
-], debug=True)
+], debug=debug)
+
+cron = webapp2.WSGIApplication([
+    ('/tasks/reset', ResetTask),
+], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:

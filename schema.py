@@ -21,16 +21,18 @@ class Gamenight(ndb.Model):
     notes = ndb.StringProperty('n', indexed=False)
 
     @classmethod
-    def schedule(cls, date=None):
+    def schedule(cls, date=None, fallback='Probably'):
         if date is None:
             date = Utils.Saturday()
 
-        schedule = cls.query(cls.date==date).get() or \
+        schedule = cls.query(cls.date==date).filter(cls.status=='Yes').get() or \
                    Invitation.resolve(when=date) or \
-                   Gamenight(status='Maybe',
-                             date=Utils.Saturday(),
+                   Gamenight(status=fallback,
+                             date=date,
                              lastupdate=Utils.Now())
         schedule.put()
+        logging.info('Scheduling new gamenight: %r', schedule)
+
         return schedule
 
     @classmethod
@@ -84,7 +86,7 @@ class Invitation(ndb.Model):
         return ndb.Key(cls, 'root')
 
     @classmethod
-    def resolve(cls, when=None, history=4):
+    def resolve(cls, when=Utils.Saturday(), history=4):
         """Figure out where GN should be at the given date.
 
         By default, consider the last 4 to give preference to people who
@@ -92,6 +94,8 @@ class Invitation(ndb.Model):
 
         if type(when) != datetime.date:
             when = when.date()
+
+        logging.info('Resolving gamenight for %s', when)
 
         invitations = cls.query(cls.date == when)
         logging.debug('Query: %r' % invitations)

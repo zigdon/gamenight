@@ -1,0 +1,5 @@
+cron:
+- description: Reset page
+  url: /tasks/reset
+  schedule: every sunday 03:00
+  timezone: America/Los_Angeles

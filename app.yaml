@@ -8,6 +8,10 @@ handlers:
 - url: /resources
   static_dir: resources
 
+- url: /tasks/.*
+  script: gamenight.cron
+  login: admin
+
 - url: /.*
   script: gamenight.application
 
