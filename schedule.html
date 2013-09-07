@@ -10,9 +10,13 @@
                     <h3 class="muted"> {{ day.date }} </h3>
                     <ul>
                         {% if day.scheduled %}
-                            <li class="scheduled">
-                                {{ day.owner.get().name }}: {{ day.time }} @ {{ day.where }}
-                            </li>
+                            {% if day.status == 'Yes' %}
+                                <li class="scheduled">
+                                    {{ day.owner.get().name }}: {{ day.time }} @ {{ day.where }}
+                                </li>
+                            {% else %}
+                                <li class="missing">None scheduled yet.</li>
+                            {% endif %}
                         {% endif %}
                         {% for invite in day.invitations %}
                             <li>
