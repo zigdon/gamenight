@@ -210,10 +210,17 @@ class InvitePage(webapp2.RequestHandler):
 
         args['owner'] = user.key
 
-        updated = Invitation.create(args)
+        updated, invite = Invitation.create(args)
 
         if updated:
-            self.get(msg='Invitation updated!')
+            gn = Gamenight.query(Gamenight.invitation==invite.key).get()
+            if gn:
+                gn.update()
+                msg = 'Invitation and gamenight updated!'
+            else:
+                msg = 'Invitation updated!'
+
+            self.get(msg=msg)
         else:
             self.get(msg='Invitation created!')
 

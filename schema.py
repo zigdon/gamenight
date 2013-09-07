@@ -50,6 +50,19 @@ class Gamenight(ndb.Model):
         else:
             return None
 
+    def update(self):
+        if not self.invitation:
+            return False
+
+        invite = self.invitation.get()
+        self.time = invite.time
+        self.location = invite.location
+        self.notes = invite.notes
+        self.put()
+
+        return True
+
+
     def is_this_week(self):
         return self.date - datetime.date.today() < datetime.timedelta(7)
 
@@ -191,7 +204,7 @@ class Invitation(ndb.Model):
             updated = False
         ndb.transaction(lambda: invite.put())
 
-        return updated
+        return updated, invite
 
     def make_gamenight(self, overwrite=False):
         """Create an unsaved gamenight object from an invitation.
