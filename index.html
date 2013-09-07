@@ -19,6 +19,7 @@
         <div class="future">
             <ul>
                 {% if future %}
+                    Upcoming invitations:
                     {% for day in future %}
                         {% if day.type == "gamenight" %}
                             <li class="scheduled">{{ day.date.strftime("%x") }}

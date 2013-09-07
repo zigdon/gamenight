@@ -8,23 +8,23 @@
             <fieldset>
                  <legend>Invite Gamenight</legend>
                  <label for="when">When</label>
+                 <span class="help-block">Date and time.</span>
                  <input id="when" name="when" type="text" 
                         placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ when }}" />
-                 <span class="help-block">Date and time.</span>
                  <label for="where">Where</label>
+                 <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
                  <input id="where" name="where" type="text" 
                         placeholder="My house" value="{{ where }}" />
-                 <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
                  <label for="notes">Notes</label>
-                 <input id="notes" name="notes" type="text" />
                  <span class="help-block">Anything else you'd like to tell us.</span>
+                 <input id="notes" name="notes" type="text" />
+                 <span class="help-block">How important is it for you to host this time?</span>
                  <label for="priority">Priority</label>
                      <select name="priority" id="priority">
-                         <option selected>Can</option>
-                         <option>Want</option>
-                         <option>Insist</option>
+                         <option selected value="Can">Could host</option>
+                         <option value="Want">Want to host</option>
+                         <option value="Insist">Would really like to host</option>
                      </select>
-                 <span class="help-block">How important is it for you to host this time?</span>
                  <button type="submit" class="btn">Submit</button>
             </fieldset>
         </div>
@@ -39,7 +39,7 @@
                                 {{ invite.owner.get().name }} -
                             {% endif %}
                             {{ invite.datetext }} @
-                            {{ invite.location }} ({{ invite.priority }}).
+                            {{ invite.location }} ({{ invite.priority_text }}).
                             {% if invite.notes %}
                                 <br /><small>{{ invite.notes }}</small>
                             {% endif %}

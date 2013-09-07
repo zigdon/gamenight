@@ -70,6 +70,11 @@ class Invitation(ndb.Model):
 
     datetext = ndb.ComputedProperty(text_date)
 
+    text_pri = { 'Can': 'Could host',
+                 'Want': 'Want to host',
+                 'Insist': 'Would really want to host' }
+    priority_text = ndb.ComputedProperty(lambda self: self.text_pri[self.priority])
+
     @classmethod
     def get(cls, key):
         return ndb.Key(cls, 'root', cls, int(key)).get()
@@ -148,12 +153,10 @@ class Invitation(ndb.Model):
         res = {}
         invlist = defaultdict(list)
         for invite in invitations.iter():
-            invlist[invite.date].append(
-                (invite.owner.get().name, invite.priority))
+            invlist[invite.date].append(invite.owner.get().name)
 
         for date, invites in invlist.iteritems():
-            res[date] = ", ".join("%s (%s)" % (name, pri) for
-                                  name, pri in invites)
+            res[date] = ", ".join(name for name in invites)
 
         return res
 
