@@ -124,33 +124,6 @@ class SchedulePage(webapp2.RequestHandler):
         template = JINJA_ENVIRONMNT.get_template('schedule.html')
         self.response.write(template.render(template_values))
 
-class EditPage(webapp2.RequestHandler):
-    @logged_in
-    def get(self, template_values={}):
-        user = User.get_or_insert(users.get_current_user().email())
-
-        futurenights = Gamenight.future(100)
-        if user.superuser:
-            invitations = Invitation.query()
-        else:
-            invitations = Invitation.query(Invitation.owner==user.key)
-        invitations = invitations.order(Invitation.date).iter()
-
-        summary = Invitation.summary()
-
-        template_values.update({
-            'scheduled': futurenights,
-            'invitations': invitations,
-            'summary': summary,
-            'logout': users.create_logout_url('/'),
-            'user': user.key.id(),
-            'admin': user.superuser,
-            'users': User.query().iter(),
-        })
-
-        template = JINJA_ENVIRONMNT.get_template('edit.html')
-        self.response.write(template.render(template_values))
-
 
 class InvitePage(webapp2.RequestHandler):
     @logged_in
@@ -330,7 +303,6 @@ Thanks!
 debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
-    ('/edit', EditPage),
     ('/invite', InvitePage),
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
