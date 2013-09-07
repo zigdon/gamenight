@@ -229,7 +229,7 @@ class User(ndb.Model):
 
     def validate(prop, name):
         animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk', 'quahog',
-                    'rutabega', 'rabbit', 'dragon', 'boar', 'horse', 'crab',
+                    'rutabaga', 'rabbit', 'dragon', 'boar', 'horse', 'crab',
                     'fish', 'libra', 'alicorn', 'moose', 'geoduck', 'Nudibranch' ]
         if name in [None, 'None']:
             return 'Some %s' % random.choice(animals).title()
