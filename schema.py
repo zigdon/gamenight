@@ -118,7 +118,7 @@ class Invitation(ndb.Model):
 
         # no one wants to host :(
         if not candidates:
-            logging.debug("none found.")
+            logging.debug('none found.')
             return None
 
         # more than one option, filter out the recent hosts until we run out of
@@ -161,7 +161,7 @@ class Invitation(ndb.Model):
             invlist[invite.date].append(invite.owner.get().name)
 
         for date, invites in invlist.iteritems():
-            res[date] = ", ".join(name for name in invites)
+            res[date] = ', '.join(name for name in invites)
 
         return res
 
@@ -228,8 +228,6 @@ class User(ndb.Model):
     nag = ndb.BooleanProperty('e')
 
     def validate(prop, name):
-        print "prop: %r, name: %r" % (prop, name)
-
         animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk', 'quahog',
                     'rutabega', 'rabbit', 'dragon', 'boar', 'horse', 'crab',
                     'fish', 'libra', 'alicorn', 'moose', 'geoduck', 'Nudibranch' ]

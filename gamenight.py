@@ -188,7 +188,7 @@ class InvitePage(webapp2.RequestHandler):
                 return
 
             if invite.owner != user.key and not user.superuser:
-                self.get(error="Not your invitation.")
+                self.get(error='Not your invitation.')
                 return
 
             msg = ''
@@ -237,9 +237,9 @@ class InvitePage(webapp2.RequestHandler):
         updated = Invitation.create(args)
 
         if updated:
-            self.get(msg="Invitation updated!")
+            self.get(msg='Invitation updated!')
         else:
-            self.get(msg="Invitation created!")
+            self.get(msg='Invitation created!')
 
 
 class ProfilePage(webapp2.RequestHandler):
@@ -276,7 +276,7 @@ class ProfilePage(webapp2.RequestHandler):
         if user.superuser:
             edit = self.request.get('edit', False)
             if edit:
-                self.get(profile=edit, msg="Editing %s" % edit)
+                self.get(profile=edit, msg='Editing %s' % edit)
                 return
             profile = User.get(self.request.get('pid'))
             profile.superuser = self.request.get('admin')=='on'
@@ -288,7 +288,7 @@ class ProfilePage(webapp2.RequestHandler):
         profile.nag = self.request.get('nag')=='on'
         profile.put()
 
-        self.get(msg="Profile updated!", profile=profile.key.id())
+        self.get(msg='Profile updated!', profile=profile.key.id())
 
 
 # tasks
@@ -305,15 +305,12 @@ class NagTask(webapp2.RequestHandler):
             message.sender = 'Gamenight <dan@peeron.com>'
             message.to = message.sender
             message.subject = 'Want to host gamenight?'
-            message.body ="""
-Seems that no one has offered to host gamenight this week. Want to host? Go to
-http://TBD/invite!
+            message.body = """
+Seems that no one has offered to host gamenight this week. Want to host? Go to http://TBD/invite!
 
 Thanks!
 
-(You asked to get these emails if no one is hosting by Tuesday morning. If you
-want to stop getting these, go to http://TBD/profile and uncheck the 'nag
-emails' option.)
+(You asked to get these emails if no one is hosting by Tuesday morning. If you want to stop getting these, go to http://TBD/profile and uncheck the 'nag emails' option.)
 """
 
             message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
