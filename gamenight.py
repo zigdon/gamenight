@@ -78,11 +78,14 @@ class MainPage(webapp2.RequestHandler):
           'updated': updated,
         }
 
-        if gamenight.date:
-            template_values['when'] = gamenight.date.strftime('%I:%M %p')
+        if gamenight.date and gamenight.time:
+            template_values['when'] = datetime.combine(gamenight.date, gamenight.time).strftime('%I:%M %p')
 
         if gamenight.location:
             template_values['where'] =  gamenight.location
+
+        if gamenight.notes:
+            template_values['notes'] =  gamenight.notes
 
         template = JINJA_ENVIRONMNT.get_template('index.html')
         # Write the submission form and the footer of the page
@@ -193,13 +196,13 @@ class InvitePage(webapp2.RequestHandler):
 
             msg = ''
             gn = Gamenight.query(Gamenight.invitation==invite.key).get()
+            invite.key.delete()
+            msg = 'Invitation withdrawn. '
+
             if gn:
                 gn.key.delete()
-                msg = 'Rescheduling gamenight. '
-                # TODO: actually reschedule the gn
-
-            invite.key.delete()
-            msg += 'Invitation withdrawn.'
+                msg += 'Rescheduling gamenight. '
+                Gamenight.schedule()
 
             self.get(msg=msg)
             return
@@ -240,6 +243,9 @@ class InvitePage(webapp2.RequestHandler):
             self.get(msg='Invitation updated!')
         else:
             self.get(msg='Invitation created!')
+
+        if args['when'] < Utils.Saturday():
+            Gamenight.schedule()
 
 
 class ProfilePage(webapp2.RequestHandler):
@@ -295,6 +301,7 @@ class ProfilePage(webapp2.RequestHandler):
 class ResetTask(webapp2.RequestHandler):
     def get(self):
         Gamenight.schedule()
+        self.redirect('/')
 
 
 class NagTask(webapp2.RequestHandler):
@@ -316,6 +323,8 @@ Thanks!
             message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
             logging.info('Sending nag email to %r', message.to)
             message.send()
+
+        self.redirect('/')
 
 
 debug = True
