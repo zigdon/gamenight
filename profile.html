@@ -1,22 +1,38 @@
 {% extends "base.html" %}
 {% set tab = 'profile' %}
-{% block title %}Offer to host gamenight{% endblock %}
+{% block title %}Gamenight host profile{% endblock %}
 {% block content %}
 <form method="post">
     <div class="row-fluid">
         <div class="span6">
             <fieldset>
-                <legend>Profile{% if user.superuser %}: {{ profile.email }}{% endif %}</legend>
+                <legend>Profile{% if user.superuser %}: {{ profile.key.id() }}{% endif %}</legend>
                 <label for="name">Name</label>
                 <input id="name" name="name" type="text" value="{{ profile.name }}" />
                 <label for="location">Default location</label>
                 <input id="location" name="location" type="text" value="{{ profile.location }}" />
                 <br />
-                <input type="hidden" id="pid" name="pid" value="{{ profile.key.id() }}" />
+                {% if user.superuser %}
+                    <input type="hidden" id="pid" name="pid" value="{{ profile.key.id() }}" />
+                    <label>
+                        <input type="checkbox" name="admin" id="admin" {% if profile.superuser %} checked="checked" {% endif %} />
+                        Admin
+                    </label>
+                {% endif %}
                 <button type="submit" class="btn">Save</button>
             </fieldset>
         </div>
         <div class="span6">
+            {% if user.superuser %}
+                <legend>Users:</legend>
+                <ul>
+                    {% for u in users %}
+                        <li>{{ u.key.id() }}: {{ u.name }}
+                            <button type="submit" class="close" id="edit" name="edit" value="{{ u.key.id() }}">edit</button>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
     </div>
 </form>

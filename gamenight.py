@@ -244,17 +244,27 @@ class InvitePage(webapp2.RequestHandler):
 
 class ProfilePage(webapp2.RequestHandler):
     @logged_in
-    def get(self, template_values={}, msg=None, error=None):
+    def get(self, template_values={}, msg=None, error=None, profile=None):
         user = User.get_or_insert(users.get_current_user().email())
 
         template_values.update({
             'user': user,
             'msg': msg,
             'error': error,
+            'logout': users.create_logout_url('/'),
         })
 
-        if not user.superuser or not template_values.has_key('profile'):
-            template_values['profile'] = user
+        template_values['profile'] = user
+
+        if user.superuser:
+            template_values['users'] = User.query().fetch()
+            if profile:
+                template_values['profile'] = User.get(profile)
+
+                if not profile:
+                    template_values['profile'] = user
+                    template_values['error'] = "Couldn't find user %s" % profile
+
 
         template = JINJA_ENVIRONMNT.get_template('profile.html')
         self.response.write(template.render(template_values))
@@ -264,7 +274,12 @@ class ProfilePage(webapp2.RequestHandler):
         user = User.get_or_insert(users.get_current_user().email())
 
         if user.superuser:
+            edit = self.request.get('edit', False)
+            if edit:
+                self.get(profile=edit, msg="Editing %s" % edit)
+                return
             profile = User.get(self.request.get('pid'))
+            profile.superuser = self.request.get('admin')=='on'
         else:
             profile = user
 
@@ -272,7 +287,7 @@ class ProfilePage(webapp2.RequestHandler):
         profile.name = self.request.get('name')
         profile.put()
 
-        self.get(msg="Profile updated!")
+        self.get(msg="Profile updated!", profile=profile.key.id())
 
 application = webapp2.WSGIApplication([
     ('/', MainPage),

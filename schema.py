@@ -219,5 +219,8 @@ class User(ndb.Model):
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')
 
+    @classmethod
+    def get(cls, key):
+        return ndb.Key(cls, key).get()
 
 # vim: set ts=4 sts=4 sw=4 et:
