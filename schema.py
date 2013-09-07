@@ -214,10 +214,20 @@ class Invitation(ndb.Model):
 
 class User(ndb.Model):
     """Accounts of people who host."""
-    name = ndb.StringProperty('n')
     location = ndb.StringProperty('l', indexed=False)
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')
+
+    def validate(prop, name):
+        print "prop: %r, name: %r" % (prop, name)
+
+        animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk', 'quahog',
+                    'rutabega', 'rabbit', 'dragon', 'boar', 'horse', 'crab',
+                    'fish', 'libra', 'alicorn', 'moose', 'geoduck', 'Nudibranch' ]
+        if name in [None, 'None']:
+            return 'Some %s' % random.choice(animals).title()
+
+    name = ndb.StringProperty('n', validator=validate)
 
     @classmethod
     def get(cls, key):
