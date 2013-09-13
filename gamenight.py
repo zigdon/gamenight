@@ -5,13 +5,17 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
 from collections import defaultdict
 from datetime import datetime, timedelta
 from dateutil import parser
+import httplib2
 import jinja2
 import logging
 import os
 import urllib
 import webapp2
 
-from google.appengine.api import mail, users
+from google.appengine.api import mail, users, memcache
+from oauth2client.appengine import AppAssertionCredentials
+from apiclient.discovery import build
+
 
 from schema import Gamenight, Invitation, User, Config
 from utils import Utils
@@ -310,12 +314,28 @@ Thanks!
         self.redirect('/')
 
 
+# api tests
+class ApiTest(webapp2.RequestHandler):
+      credentials = AppAssertionCredentials(
+                        scope='https://www.googleapis.com/auth/calendar.read_write')
+      http = credentials.authorize(httplib2.Http(memcache))
+      service = build(serviceName='calendar', version='v3', http=http,
+                    developerKey='AIzaSyCpTJapwsVhmWLE3RQzMYeL1o06-flDSSw')
+      request = service.events().list(calendarId='primary')
+      response = request.execute(http=http)
+      template_values = { 'data': repr(response) }
+      template = JINJA_ENVIRONMNT.get_template('test.html')
+      self.response.write(template.render(template_values))
+
+
+
 debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/invite', InvitePage),
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
+    ('/apitest', ApiTest),
 ], debug=debug)
 
 cron = webapp2.WSGIApplication([
