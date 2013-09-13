@@ -253,4 +253,10 @@ class User(ndb.Model):
     def get(cls, key):
         return ndb.Key(cls, key).get()
 
+class Config(ndb.Model):
+    """Store application configuration values."""
+    name = ndb.StringProperty('n')
+    value = ndb.StringProperty('v')
+
+
 # vim: set ts=4 sts=4 sw=4 et:

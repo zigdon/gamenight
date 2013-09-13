@@ -13,12 +13,15 @@ import webapp2
 
 from google.appengine.api import mail, users
 
-from schema import Gamenight, Invitation, User
+from schema import Gamenight, Invitation, User, Config
 from utils import Utils
 
 JINJA_ENVIRONMNT = jinja2.Environment(
   loader=jinja2.FileSystemLoader(os.path.dirname(__file__)),
   extensions=['jinja2.ext.autoescape'])
+
+config = {x.name: x.value for x in Config.query().fetch()}
+
 
 def logged_in(func):
     def dec(self, **kwargs):
@@ -289,7 +292,7 @@ class NagTask(webapp2.RequestHandler):
         gn = Gamenight.schedule(fallback='Maybe')
         if gn.status != 'Yes':
             message = mail.EmailMessage()
-            message.sender = 'Gamenight <dan@peeron.com>'
+            message.sender = 'Gamenight <%s>' % config['sender']
             message.to = message.sender
             message.subject = 'Want to host gamenight?'
             message.body = """
