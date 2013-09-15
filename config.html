@@ -14,11 +14,20 @@
                         <span class="label label-danger">Failed</span>
                     {% endif %}</label>
                     <div class="controls">
-                        <input type="text" id="config_{{ name }}" 
+                        <input type="text" id="config_{{ name }}"
                                name="config_{{ name }}" value="{{ val }}"/>
                     </div>
                 </div>
             {% endfor %}
+            <div class="control-group">
+                <label class="control-label" for="new_entry">Add a new key</label>
+                <div class="controls">
+                    <input type="text" id="new_name" name="new_name"
+                           placeholder="Name"/>
+                    <input type="text" id="new_value" name="new_value"
+                           placeholder="Value"/>
+                </div>
+            </div>
             <div class="control-group">
                 <div class="controls">
                      <button type="submit" class="btn">Save</button>

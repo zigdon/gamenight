@@ -187,6 +187,13 @@ class ConfigPage(webapp2.RequestHandler):
             else:
                 logging.info("No update for %s" % name)
 
+        new_name = self.request.get('new_name')
+        if new_name:
+            value = self.request.get('new_value')
+            Config(name=new_name, value=value).put()
+            flags[new_name] = True
+            config[new_name] = value
+
 
         self.get(error=", ".join(err), flags=flags)
 
