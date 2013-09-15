@@ -397,10 +397,13 @@ class ApiTest(webapp2.RequestHandler):
 
     @decorator.oauth_required
     def get(self):
+        user = User.get_or_insert(users.get_current_user().email())
         http = ApiTest.decorator.http()
         request = ApiTest.service.events().list(calendarId=config.get('calendar_id'))
         response = request.execute(http=http)
-        template_values = { 'data': repr(response) }
+        template_values = { 'data': repr(response),
+                            'user': user,
+                          }
         template = JINJA_ENVIRONMNT.get_template('test.html')
         self.response.write(template.render(template_values))
 
