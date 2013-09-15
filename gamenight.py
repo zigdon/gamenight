@@ -355,7 +355,7 @@ class NagTask(webapp2.RequestHandler):
         gn = Gamenight.schedule(fallback='Maybe')
         if gn.status != 'Yes':
             message = mail.EmailMessage()
-            message.sender = 'Gamenight <%s>' % config['sender']
+            message.sender = 'Gamenight <%s>' % config.get('sender')
             message.to = message.sender
             message.subject = 'Want to host gamenight?'
             message.body = """
@@ -376,8 +376,8 @@ Thanks!
 # api tests
 class ApiTest(webapp2.RequestHandler):
     decorator = OAuth2Decorator(
-                    client_id=config['client_id'],
-                    client_secret=config['client_secret'],
+                    client_id=config.get('client_id'),
+                    client_secret=config.get('client_secret'),
                     scope='https://www.googleapis.com/auth/calendar')
     service = build('calendar', 'v3')
 
@@ -385,7 +385,7 @@ class ApiTest(webapp2.RequestHandler):
     @decorator.oauth_required
     def get(self):
         http = decorator.http()
-        request = ervice.events().list(calendarId=config['calendar_id'])
+        request = ervice.events().list(calendarId=config.get('calendar_id'))
         response = request.execute(http=http)
         template_values = { 'data': repr(response) }
         template = JINJA_ENVIRONMNT.get_template('test.html')
