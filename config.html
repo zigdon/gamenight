@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set tab = 'admin' %}
+{% block title %}Edit Configuration{% endblock %}
+{% block content %}
+<div class="row-fluid">
+    <div class="span12">
+        <form class="form-horizontal" method="post">
+            {% for name, val in config|dictsort %}
+                <div class="control-group">
+                    <label class="control-label" for="config_{{ name }}">{{ name|capitalize }}
+                    {% if flags[name] %}
+                        <span class="label label-success">Updated</span>
+                    {% elif flags[name] == None %}
+                        <span class="label label-danger">Failed</span>
+                    {% endif %}</label>
+                    <div class="controls">
+                        <input type="text" id="config_{{ name }}" 
+                               name="config_{{ name }}" value="{{ val }}"/>
+                    </div>
+                </div>
+            {% endfor %}
+            <div class="control-group">
+                <div class="controls">
+                     <button type="submit" class="btn">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{# vim: set ts=4 sts=4 sw=4 et: #}
+
