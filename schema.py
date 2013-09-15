@@ -258,5 +258,18 @@ class Config(ndb.Model):
     name = ndb.StringProperty('n')
     value = ndb.StringProperty('v')
 
+    @classmethod
+    def update(cls, key, val):
+        c = cls.query(cls.name==key).get()
+        if not c:
+            logging.warning('Trying to update an unknown key %s: %s', key, val)
+            return None
+
+        if c.value == val:
+            return False
+
+        c.value = val
+        c.put()
+        return True
 
 # vim: set ts=4 sts=4 sw=4 et:

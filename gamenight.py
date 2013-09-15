@@ -12,9 +12,9 @@ import os
 import urllib
 import webapp2
 
-from google.appengine.api import mail, users, memcache
-from oauth2client.appengine import AppAssertionCredentials
 from apiclient.discovery import build
+from google.appengine.api import mail, users
+from oauth2client.appengine import OAuth2Decorator, OAuth2Handler
 
 
 from schema import Gamenight, Invitation, User, Config
@@ -26,12 +26,26 @@ JINJA_ENVIRONMNT = jinja2.Environment(
 
 config = {x.name: x.value for x in Config.query().fetch()}
 
-
 def logged_in(func):
     def dec(self, **kwargs):
         sys_user = users.get_current_user()
         if not sys_user:
             self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        return func(self, **kwargs)
+    return dec
+
+def admin_only(func):
+    def dec(self, **kwargs):
+        sys_user = users.get_current_user()
+        if not sys_user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        user = User.get_or_insert(sys_user.email())
+        if not user.superuser:
+            self.redirect("/invite")
             return
 
         return func(self, **kwargs)
@@ -130,6 +144,51 @@ class SchedulePage(webapp2.RequestHandler):
 
         template = JINJA_ENVIRONMNT.get_template('schedule.html')
         self.response.write(template.render(template_values))
+
+
+class ConfigPage(webapp2.RequestHandler):
+    @admin_only
+    def get(self, error=None, flags={}):
+        user = User.get_or_insert(users.get_current_user().email())
+        if not user.superuser:
+            self.redirect('/invite',
+                          error="Must be an admin to edit configuration.")
+            return
+
+        template_values = {
+            'config': config,
+            'flags': flags,
+            'logout': users.create_logout_url('/'),
+            'user': user,
+            'error': error,
+        }
+        template = JINJA_ENVIRONMNT.get_template('config.html')
+        self.response.write(template.render(template_values))
+
+    @admin_only
+    def post(self):
+        user = User.get_or_insert(users.get_current_user().email())
+        if not user.superuser:
+            self.redirect('/invite',
+                          error="Must be an admin to edit configuration.")
+            return
+
+        err = []
+        flags = {}
+        for name in config.keys():
+            v = self.request.get('config_%s' % name)
+            if v:
+                logging.info("Updating %s: %s" % (name, v))
+                flags[name] = Config.update(name, v)
+                if flags[name] == True:
+                    config[name] = v
+                elif flags[name] is None:
+                    err.append("Failed to update %s." % name)
+            else:
+                logging.info("No update for %s" % name)
+
+
+        self.get(error=", ".join(err), flags=flags)
 
 
 class InvitePage(webapp2.RequestHandler):
@@ -316,18 +375,21 @@ Thanks!
 
 # api tests
 class ApiTest(webapp2.RequestHandler):
-      credentials = AppAssertionCredentials(
-                        scope='https://www.googleapis.com/auth/calendar.read_write')
-      http = credentials.authorize(httplib2.Http(memcache))
-      service = build(serviceName='calendar', version='v3', http=http,
-                    developerKey='AIzaSyCpTJapwsVhmWLE3RQzMYeL1o06-flDSSw')
-      request = service.events().list(calendarId='primary')
-      response = request.execute(http=http)
-      template_values = { 'data': repr(response) }
-      template = JINJA_ENVIRONMNT.get_template('test.html')
-      self.response.write(template.render(template_values))
+    decorator = OAuth2Decorator(
+                    client_id=config['client_id'],
+                    client_secret=config['client_secret'],
+                    scope='https://www.googleapis.com/auth/calendar')
+    service = build('calendar', 'v3')
 
 
+    @decorator.oauth_required
+    def get(self):
+        http = decorator.http()
+        request = ervice.events().list(calendarId=config['calendar_id'])
+        response = request.execute(http=http)
+        template_values = { 'data': repr(response) }
+        template = JINJA_ENVIRONMNT.get_template('test.html')
+        self.response.write(template.render(template_values))
 
 debug = True
 application = webapp2.WSGIApplication([
@@ -335,7 +397,9 @@ application = webapp2.WSGIApplication([
     ('/invite', InvitePage),
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
+    ('/config', ConfigPage),
     ('/apitest', ApiTest),
+    ('/oauth2callback', OAuth2Handler),
 ], debug=debug)
 
 cron = webapp2.WSGIApplication([
