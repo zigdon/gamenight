@@ -148,7 +148,7 @@ class SchedulePage(webapp2.RequestHandler):
 
 class ConfigPage(webapp2.RequestHandler):
     @admin_only
-    def get(self, error=None, flags={}):
+    def get(self, error=None, msg=None, flags={}):
         user = User.get_or_insert(users.get_current_user().email())
         if not user.superuser:
             self.redirect('/invite',
@@ -161,6 +161,7 @@ class ConfigPage(webapp2.RequestHandler):
             'logout': users.create_logout_url('/'),
             'user': user,
             'error': error,
+            'msg': msg,
         }
         template = JINJA_ENVIRONMNT.get_template('config.html')
         self.response.write(template.render(template_values))
@@ -174,10 +175,11 @@ class ConfigPage(webapp2.RequestHandler):
             return
 
         err = []
+        msg = []
         flags = {}
         for name in config.keys():
             v = self.request.get('config_%s' % name)
-            if v:
+            if v != "":
                 logging.info("Updating %s: %s" % (name, v))
                 flags[name] = Config.update(name, v)
                 if flags[name] == True:
@@ -185,17 +187,21 @@ class ConfigPage(webapp2.RequestHandler):
                 elif flags[name] is None:
                     err.append("Failed to update %s." % name)
             else:
-                logging.info("No update for %s" % name)
+                Config.query(Config.name==name).get().key.delete()
+                del(config[name])
+                msg.append("'%s' deleted." % name)
+                logging.info("Deleted key %s: %s" % name)
 
         new_name = self.request.get('new_name')
         if new_name:
             value = self.request.get('new_value')
+            logging.info("New config key %s: %s" % (new_name, value))
             Config(name=new_name, value=value).put()
             flags[new_name] = True
             config[new_name] = value
 
 
-        self.get(error=", ".join(err), flags=flags)
+        self.get(error=", ".join(err), msg=", ".join(msg), flags=flags)
 
 
 class InvitePage(webapp2.RequestHandler):
