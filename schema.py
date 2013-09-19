@@ -5,6 +5,7 @@ import random
 from utils import Utils
 
 from google.appengine.ext import ndb
+from oauth2client.appengine import CredentialsNDBProperty
 
 class Gamenight(ndb.Model):
     """Gamenights that have been scheduled."""
@@ -271,5 +272,9 @@ class Config(ndb.Model):
         c.value = val
         c.put()
         return True
+
+class Auth(ndb.Model):
+    """Store approximately one record, the oauth token for calendar access."""
+    credentials = CredentialsNDBProperty('c')
 
 # vim: set ts=4 sts=4 sw=4 et:

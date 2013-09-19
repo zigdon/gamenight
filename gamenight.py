@@ -13,11 +13,10 @@ import urllib
 import webapp2
 
 from apiclient.discovery import build
-from google.appengine.api import mail, users
-from oauth2client.appengine import OAuth2Decorator, OAuth2Handler
+from google.appengine.api import mail, users, memcache
+from oauth2client.appengine import OAuth2Decorator
 
-
-from schema import Gamenight, Invitation, User, Config
+from schema import Gamenight, Invitation, User, Config, Auth
 from utils import Utils
 
 JINJA_ENVIRONMNT = jinja2.Environment(
@@ -25,6 +24,12 @@ JINJA_ENVIRONMNT = jinja2.Environment(
   extensions=['jinja2.ext.autoescape'])
 
 config = {x.name: x.value for x in Config.query().fetch()}
+
+decorator = OAuth2Decorator(
+                client_id=config.get('client_id'),
+                client_secret=config.get('client_secret'),
+                scope='https://www.googleapis.com/auth/calendar')
+
 
 def logged_in(func):
     def dec(self, **kwargs):
@@ -386,26 +391,19 @@ Thanks!
         self.redirect('/')
 
 
-# api tests
-class ApiTest(webapp2.RequestHandler):
-    decorator = OAuth2Decorator(
-                    client_id=config.get('client_id'),
-                    client_secret=config.get('client_secret'),
-                    scope='https://www.googleapis.com/auth/calendar')
-    service = build('calendar', 'v3')
-
-
-    @decorator.oauth_required
+class ApiAuth(webapp2.RequestHandler):
+    @admin_only
+    @decorator.oauth_aware
     def get(self):
-        user = User.get_or_insert(users.get_current_user().email())
-        http = ApiTest.decorator.http()
-        request = ApiTest.service.events().list(calendarId=config.get('calendar_id'))
-        response = request.execute(http=http)
-        template_values = { 'data': repr(response),
-                            'user': user,
-                          }
-        template = JINJA_ENVIRONMNT.get_template('test.html')
-        self.response.write(template.render(template_values))
+        if not decorator.has_credentials():
+            self.redirect(decorator.authorize_url())
+            return
+
+        auth = Auth.get_or_insert('auth')
+        auth.credentials = decorator.get_credentials()
+        auth.put()
+
+        self.redirect('/config')
 
 debug = True
 application = webapp2.WSGIApplication([
@@ -414,8 +412,8 @@ application = webapp2.WSGIApplication([
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
     ('/config', ConfigPage),
-    ('/apitest', ApiTest),
-    ('/oauth2callback', OAuth2Handler),
+    ('/apiauth', ApiAuth),
+    (decorator.callback_path, decorator.callback_handler()),
 ], debug=debug)
 
 cron = webapp2.WSGIApplication([
