@@ -15,6 +15,7 @@ import webapp2
 from apiclient.discovery import build
 from google.appengine.api import mail, users, memcache
 from oauth2client.appengine import OAuth2Decorator
+from oauth2client.client import AccessTokenRefreshError
 
 from pprint import pformat
 from schema import Gamenight, Invitation, User, Config, Auth
@@ -196,7 +197,7 @@ class ConfigPage(webapp2.RequestHandler):
                 Config.query(Config.name==name).get().key.delete()
                 del(config[name])
                 msg.append("'%s' deleted." % name)
-                logging.info("Deleted key %s: %s" % name)
+                logging.info("Deleted key '%s'." % name)
 
         new_name = self.request.get('new_name')
         if new_name:
@@ -407,19 +408,27 @@ class ApiAuth(webapp2.RequestHandler):
         self.redirect('/config')
 
 class TestCal(webapp2.RequestHandler):
-    creds = Auth.query().get().credentials
-    if not creds:
-        raise Exception('Credentials not found.')
+    def get(self):
+        creds = Auth.query().get().credentials
+        if not creds:
+            raise Exception('Credentials not found.')
 
-    http = creds.authorize(httplib2.Http())
-    service = build('calendar', 'v3', http=http)
-    response = service.calendarList().list().execute()
-    message = mail.EmailMessage()
-    message.sender = 'Gamenight <%s>' % config.get('sender')
-    message.to = message.sender
-    message.subject = 'Want to host gamenight?'
-    message.body = pformat(response)
-    message.send()
+        http = creds.authorize(httplib2.Http())
+        service = build('calendar', 'v3', http=http)
+        try:
+            response = service.calendarList().list().execute()
+        except AccessTokenRefreshError:
+            creds.refresh(http)
+            response = service.calendarList().list().execute()
+
+        callist = [(x.get('id'), x.get('summary'), x.get('description')) for x in response['items']]
+        print pformat(callist)
+        message = mail.EmailMessage()
+        message.sender = 'Gamenight <%s>' % config.get('sender')
+        message.to = message.sender
+        message.subject = 'Calendar list'
+        message.body = pformat(response)
+        message.send()
 
 
 debug = True

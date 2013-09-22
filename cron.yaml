@@ -9,5 +9,5 @@ cron:
   timezone: America/Los_Angeles
 - description: Test
   url: /tasks/test
-  schedule: every day 15:55
+  schedule: every day 16:10
   timezone: America/Los_Angeles
