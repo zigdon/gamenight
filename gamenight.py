@@ -16,6 +16,7 @@ from apiclient.discovery import build
 from google.appengine.api import mail, users, memcache
 from oauth2client.appengine import OAuth2Decorator
 
+from pprint import pformat
 from schema import Gamenight, Invitation, User, Config, Auth
 from utils import Utils
 
@@ -405,6 +406,22 @@ class ApiAuth(webapp2.RequestHandler):
 
         self.redirect('/config')
 
+class TestCal(webapp2.RequestHandler):
+    creds = Auth.query().get().credentials
+    if not creds:
+        raise Exception('Credentials not found.')
+
+    http = creds.authorize(httplib2.Http())
+    service = build('calendar', 'v3', http=http)
+    response = service.calendarList().list().execute()
+    message = mail.EmailMessage()
+    message.sender = 'Gamenight <%s>' % config.get('sender')
+    message.to = message.sender
+    message.subject = 'Want to host gamenight?'
+    message.body = pformat(response)
+    message.send()
+
+
 debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
@@ -419,6 +436,7 @@ application = webapp2.WSGIApplication([
 cron = webapp2.WSGIApplication([
     ('/tasks/reset', ResetTask),
     ('/tasks/nag', NagTask),
+    ('/tasks/test', TestCal),
 ], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:

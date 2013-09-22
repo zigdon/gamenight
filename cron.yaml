@@ -7,3 +7,7 @@ cron:
   url: /tasks/nag
   schedule: every tuesday 10:00
   timezone: America/Los_Angeles
+- description: Test
+  url: /tasks/test
+  schedule: every day 15:55
+  timezone: America/Los_Angeles
