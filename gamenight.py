@@ -5,17 +5,14 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
 from collections import defaultdict
 from datetime import datetime, timedelta
 from dateutil import parser
-import httplib2
 import jinja2
 import logging
 import os
 import urllib
 import webapp2
 
-from apiclient.discovery import build
-from google.appengine.api import mail, users, memcache
+from google.appengine.api import mail, users
 from oauth2client.appengine import OAuth2Decorator
-from oauth2client.client import AccessTokenRefreshError
 
 from pprint import pformat
 from schema import Gamenight, Invitation, User, Config, Auth
@@ -72,8 +69,8 @@ class MainPage(webapp2.RequestHandler):
                 futurenights = []
         else:
             gamenight = Gamenight(status='Probably',
-                             date=Utils.Saturday(),
-                             lastupdate=Utils.Now())
+                             date=Utils.saturday(),
+                             lastupdate=Utils.now())
             futurenights = []
 
         updated = gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p')
@@ -85,7 +82,7 @@ class MainPage(webapp2.RequestHandler):
                               'location': g.location }
                             for g in futurenights}
         for week in range(1,5):
-            day = (Utils.Saturday() + timedelta(week*7)).date()
+            day = (Utils.saturday() + timedelta(week*7)).date()
 
             # skip days we already have a confirmed GN
             if upcoming.get(day, False):
@@ -130,7 +127,7 @@ class SchedulePage(webapp2.RequestHandler):
             days[gn.date]['time'] = gn.time
             days[gn.date]['where'] = gn.location
 
-        invitations = Invitation.query(Invitation.date >= Utils.Now()).\
+        invitations = Invitation.query(Invitation.date >= Utils.now()).\
                           order(Invitation.date).iter()
         for invite in invitations:
             if not days[invite.date].get('invitations'):
@@ -222,7 +219,7 @@ class InvitePage(webapp2.RequestHandler):
             invitations = Invitation.query(Invitation.owner==user.key,
                                            ancestor=Invitation.dummy())
         invitations = invitations\
-                      .filter(Invitation.date >= Utils.Now())\
+                      .filter(Invitation.date >= Utils.now())\
                       .order(Invitation.date).iter()
 
         template_values.update({
@@ -309,9 +306,6 @@ class InvitePage(webapp2.RequestHandler):
             self.get(msg=msg)
         else:
             self.get(msg='Invitation created!')
-
-        if args['when'] < Utils.Saturday():
-            Gamenight.schedule()
 
 
 class ProfilePage(webapp2.RequestHandler):
@@ -411,17 +405,8 @@ class ApiAuth(webapp2.RequestHandler):
 class TestCal(webapp2.RequestHandler):
     @admin_only
     def get(self):
-        creds = Auth.query().get().credentials
-        if not creds:
-            raise Exception('Credentials not found.')
-
-        http = creds.authorize(httplib2.Http())
-        service = build('calendar', 'v3', http=http)
-        try:
-            response = service.calendarList().list().execute()
-        except AccessTokenRefreshError:
-            creds.refresh(http)
-            response = service.calendarList().list().execute()
+        service = Utils.get_service()
+        response = service.calendarList().list().execute()
 
         callist = [(x.get('id'), x.get('summary'), x.get('description')) for x in response['items']]
         print pformat(callist)
@@ -429,7 +414,7 @@ class TestCal(webapp2.RequestHandler):
         message.sender = 'Gamenight <%s>' % config.get('sender')
         message.to = message.sender
         message.subject = 'Calendar list'
-        message.body = pformat(response)
+        message.body = pformat(callist)
         message.send()
 
 

@@ -21,17 +21,70 @@ class Gamenight(ndb.Model):
     location = ndb.StringProperty('l', indexed=False)
     notes = ndb.StringProperty('n', indexed=False)
 
+    def _pre_put_hook(self):
+        creds = Auth.get()
+        if not creds:
+            logging.warn('No credentials found, event not updated.')
+            return
+
+        service = Utils.get_service(Auth)
+        calendar_id = self._get_config('calendar_id')
+        if self.event:
+            logging.info('Updating event for %s.', self.date)
+            event = service.events().get(calendarId=calendar_id,
+                                         eventId=self.event).execute()
+            event.update(self._make_event())
+            service.events().update(calendarId=calendar_id,
+                                    eventId=self.event,
+                                    body=event).execute()
+        else:
+            logging.info('Creating new event for %s.', self.date)
+            event = self._make_event()
+            self.event = service.events().insert(calendarId=calendar_id,
+                                                 body=event).execute()
+            logging.info('New event id: %s.', self.event)
+
+    def _pre_delete_hook(self):
+        if not self.event:
+            return
+
+        service = Utils.get_service(Auth)
+        calendar_id = self._get_config('calendar_id')
+        service.events().delete(
+            calendarId=calendar_id, eventId=self.event).execute()
+
+    def _get_config(self, key):
+        conf = Config.query(Config.name==key).get()
+        if conf:
+            return conf.value
+        else:
+            return None
+
+    def _make_event(self):
+        start = datetime.datetime.combine(self.date, self.time)
+        event = {
+            'start': { 'dateTime': self.date.strftime('%Y-%m-%dT%H:%M:%S'),
+                     'timeZone': 'America/Los_Angeles' },
+            'end': { 'dateTime': self.date.strftime('%Y-%m-%dT23:59:59'),
+                     'timeZone': 'America/Los_Angeles' },
+            'description': self.notes,
+            'location': self.location,
+            'summary': 'Gamenight: %s' % self.status.upper(),
+        }
+
+        return event
+
     @classmethod
     def schedule(cls, date=None, fallback='Probably'):
         if date is None:
-            date = Utils.Saturday()
+            date = Utils.saturday()
 
         schedule = cls.query(cls.date==date).filter(cls.status=='Yes').get() or \
                    Invitation.resolve(when=date) or \
                    cls.query(cls.date==date).get() or \
                    Gamenight(status=fallback,
                              date=date,
-                             lastupdate=Utils.Now())
+                             lastupdate=Utils.now())
         schedule.put()
         logging.info('Scheduling new gamenight: %r', schedule)
 
@@ -39,7 +92,7 @@ class Gamenight(ndb.Model):
 
     @classmethod
     def future(cls, limit):
-        return cls.query(cls.date >= Utils.Now()).order(cls.date).fetch(limit)
+        return cls.query(cls.date >= Utils.now()).order(cls.date).fetch(limit)
 
     @classmethod
     def this_week(cls):
@@ -81,7 +134,7 @@ class Invitation(ndb.Model):
         date = datetime.datetime.combine(self.date, self.time)
         if self.date == datetime.date.today():
             return self.time.strftime('Today, %I:%M %p')
-        if date - Utils.Now() < datetime.timedelta(6):
+        if date - Utils.now() < datetime.timedelta(6):
             return self.time.strftime('Saturday, %I:%M %p')
         return date.strftime('%b %d, %I:%M %p')
 
@@ -101,7 +154,7 @@ class Invitation(ndb.Model):
         return ndb.Key(cls, 'root')
 
     @classmethod
-    def resolve(cls, when=Utils.Saturday(), history=4):
+    def resolve(cls, when=Utils.saturday(), history=4):
         """Figure out where GN should be at the given date.
 
         By default, consider the last 4 to give preference to people who
@@ -140,7 +193,7 @@ class Invitation(ndb.Model):
         logging.debug('Candidates: %r' % candidates.keys())
         if len(candidates) > 1:
             if history:
-                old_nights = Gamenight.query(Gamenight.date < Utils.Now()).\
+                old_nights = Gamenight.query(Gamenight.date < Utils.now()).\
                                  order(Gamenight.date).fetch(history)
                 while old_nights and len(candidates) > 1:
                     owner = old_nights.pop().owner.id()
@@ -164,8 +217,8 @@ class Invitation(ndb.Model):
         Returns a dictionary of dates, with a list of (who, priority) for each.
         """
 
-        invitations = cls.query(cls.date >= Utils.Now()).\
-                          filter(cls.date < Utils.Now() +
+        invitations = cls.query(cls.date >= Utils.now()).\
+                          filter(cls.date < Utils.now() +
                                  datetime.timedelta(weeks=8)).\
                           order(cls.date)
 
@@ -226,7 +279,7 @@ class Invitation(ndb.Model):
 
         gamenight.invitation = self.key
         gamenight.status = 'Yes'
-        gamenight.lastupdate = Utils.Now()
+        gamenight.lastupdate = Utils.now()
         gamenight.time = self.time
         gamenight.owner = self.owner
         gamenight.location = self.location
@@ -276,5 +329,13 @@ class Config(ndb.Model):
 class Auth(ndb.Model):
     """Store approximately one record, the oauth token for calendar access."""
     credentials = CredentialsNDBProperty('c')
+
+    @classmethod
+    def get(cls):
+        creds = cls.query().get()
+        if creds:
+            return creds.credentials
+        else:
+            return None
 
 # vim: set ts=4 sts=4 sw=4 et:

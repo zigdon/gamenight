@@ -1,8 +1,14 @@
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
+
+from apiclient.discovery import build
 from datetime import datetime, timedelta, tzinfo
+import httplib2
 
 class Utils:
     @classmethod
-    def Saturday(cls):
+    def saturday(cls):
         """Return this week's saturday."""
         d = datetime.today().replace(hour=20, minute=0, second=0)
         weekday = d.weekday()
@@ -14,10 +20,21 @@ class Utils:
             return d
 
     @classmethod
-    def Now(cls):
+    def now(cls):
         """Return current datetime, adjusted for timezone."""
         now = datetime.now()
         return now + Pacific_tzinfo().utcoffset(now)
+
+    @classmethod
+    def get_service(cls, Auth):
+        creds = Auth.get()
+        if not creds:
+            raise Exception('Credentials not found.')
+
+        http = creds.authorize(httplib2.Http())
+        creds.refresh(http)
+        service = build('calendar', 'v3', http=http)
+        return service
 
 class Pacific_tzinfo(tzinfo):
     """Implementation of the Pacific timezone."""
