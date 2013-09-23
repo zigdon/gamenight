@@ -365,12 +365,13 @@ class ProfilePage(webapp2.RequestHandler):
 
 # tasks
 class ResetTask(webapp2.RequestHandler):
+    @admin_only
     def get(self):
         Gamenight.schedule()
         self.redirect('/')
 
-
 class NagTask(webapp2.RequestHandler):
+    @admin_only
     def get(self):
         gn = Gamenight.schedule(fallback='Maybe')
         if gn.status != 'Yes':
@@ -408,6 +409,7 @@ class ApiAuth(webapp2.RequestHandler):
         self.redirect('/config')
 
 class TestCal(webapp2.RequestHandler):
+    @admin_only
     def get(self):
         creds = Auth.query().get().credentials
         if not creds:
