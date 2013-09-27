@@ -350,7 +350,6 @@ class ProfilePage(webapp2.RequestHandler):
             profile = user
 
         profile.location = self.request.get('location')
-        profile.name = self.request.get('name')
         profile.nag = self.request.get('nag')=='on'
         profile.put()
 

@@ -294,15 +294,6 @@ class User(ndb.Model):
     superuser = ndb.BooleanProperty('s')
     nag = ndb.BooleanProperty('e')
 
-    def validate(prop, name):
-        animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk', 'quahog',
-                    'rutabaga', 'rabbit', 'dragon', 'boar', 'horse', 'crab',
-                    'fish', 'libra', 'alicorn', 'moose', 'geoduck', 'Nudibranch' ]
-        if name in [None, 'None']:
-            return 'Some %s' % random.choice(animals).title()
-
-    name = ndb.StringProperty('n', validator=validate)
-
     @classmethod
     def get(cls, key):
         return ndb.Key(cls, key).get()
