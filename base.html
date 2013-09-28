@@ -38,7 +38,7 @@
                                     {% endif %}
                                     <li class="divider-vertical"></li>
                                     <li class="dropdown{% if tab == 'profile' %} active{% endif %}">
-                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ user.nickname }}<strong class="caret"></strong></a>
+                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ user.name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
                                             <li>
                                                 <a href="/profile">Profile{% if user.superuser %} and users{% endif %}</a>

@@ -293,10 +293,30 @@ class User(ndb.Model):
     color = ndb.StringProperty('c', indexed=False)
     superuser = ndb.BooleanProperty('s')
     nag = ndb.BooleanProperty('e')
+    name = ndb.StringProperty('n')
 
     @classmethod
-    def get(cls, key):
+    def lookup(cls, key):
         return ndb.Key(cls, key).get()
+
+    @classmethod
+    def get(cls, userobj):
+        user = ndb.Key(cls, userobj.email()).get()
+        if user is None:
+            user = cls(id=userobj.email())
+            user.name = userobj.nickname()
+
+            print "user name = '%s'" % user.name
+            if user.name in [None, 'None', ''] or user.name.find("@") > -1:
+                animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk',
+                            'quahog', 'rutabaga', 'rabbit', 'dragon', 'boar',
+                            'horse', 'crab', 'fish', 'libra', 'alicorn',
+                            'moose', 'geoduck', 'Nudibranch' ]
+                user.name = 'Some %s' % random.choice(animals).title()
+
+            user.put()
+
+        return user
 
 class Config(ndb.Model):
     """Store application configuration values."""

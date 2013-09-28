@@ -47,8 +47,8 @@ def admin_only(func):
             self.redirect(users.create_login_url(self.request.uri))
             return
 
-        user = User.get_or_insert(sys_user.email())
-        if not user.superuser:
+        user = User.lookup(sys_user.email())
+        if not user or not user.superuser:
             self.redirect("/invite")
             return
 
@@ -140,7 +140,7 @@ class SchedulePage(webapp2.RequestHandler):
         template_values = { 'days': sorted(days.values(), key=day_sorter) }
         current_user = users.get_current_user()
         if current_user:
-            user = User.get_or_insert(users.get_current_user().email())
+            user = User.get(users.get_current_user())
             template_values.update({
                 'logout': users.create_logout_url('/'),
                 'user': user,
@@ -153,7 +153,7 @@ class SchedulePage(webapp2.RequestHandler):
 class ConfigPage(webapp2.RequestHandler):
     @admin_only
     def get(self, error=None, msg=None, flags={}):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
         if not user.superuser:
             self.redirect('/invite',
                           error="Must be an admin to edit configuration.")
@@ -172,7 +172,7 @@ class ConfigPage(webapp2.RequestHandler):
 
     @admin_only
     def post(self):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
         if not user.superuser:
             self.redirect('/invite',
                           error="Must be an admin to edit configuration.")
@@ -211,7 +211,7 @@ class ConfigPage(webapp2.RequestHandler):
 class InvitePage(webapp2.RequestHandler):
     @logged_in
     def get(self, template_values={}, msg=None, error=None):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
 
         if user.superuser:
             invitations = Invitation.query(ancestor=Invitation.dummy())
@@ -238,7 +238,7 @@ class InvitePage(webapp2.RequestHandler):
 
     @logged_in
     def post(self, template_values={}):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
 
         if self.request.get('withdraw'):
             invite = Invitation.get(self.request.get('withdraw'))
@@ -311,7 +311,7 @@ class InvitePage(webapp2.RequestHandler):
 class ProfilePage(webapp2.RequestHandler):
     @logged_in
     def get(self, template_values={}, msg=None, error=None, profile=None):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
 
         template_values.update({
             'user': user,
@@ -325,7 +325,7 @@ class ProfilePage(webapp2.RequestHandler):
         if user.superuser:
             template_values['users'] = User.query().fetch()
             if profile:
-                template_values['profile'] = User.get(profile)
+                template_values['profile'] = User.lookup(profile)
 
                 if not profile:
                     template_values['profile'] = user
@@ -337,19 +337,20 @@ class ProfilePage(webapp2.RequestHandler):
 
     @logged_in
     def post(self):
-        user = User.get_or_insert(users.get_current_user().email())
+        user = User.get(users.get_current_user())
 
         if user.superuser:
             edit = self.request.get('edit', False)
             if edit:
                 self.get(profile=edit, msg='Editing %s' % edit)
                 return
-            profile = User.get(self.request.get('pid'))
+            profile = User.lookup(self.request.get('pid'))
             profile.superuser = self.request.get('admin')=='on'
         else:
             profile = user
 
         profile.location = self.request.get('location')
+        profile.name = self.request.get('name')
         profile.nag = self.request.get('nag')=='on'
         profile.put()
 
