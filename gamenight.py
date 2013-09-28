@@ -252,6 +252,7 @@ class InvitePage(webapp2.RequestHandler):
 
             msg = ''
             gn = Gamenight.query(Gamenight.invitation==invite.key).get()
+            logging.info('Invite id: %s, gn: %s', invite.key, gn)
             invite.key.delete()
             msg = 'Invitation withdrawn. '
 

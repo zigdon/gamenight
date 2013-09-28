@@ -40,18 +40,23 @@ class Gamenight(ndb.Model):
         else:
             logging.info('Creating new event for %s.', self.date)
             event = self._make_event()
-            self.event = service.events().insert(calendarId=calendar_id,
-                                                 body=event).execute()
-            logging.info('New event id: %s.', self.event)
+            newevent = service.events().insert(calendarId=calendar_id,
+                                                   body=event).execute()
+            self.event = newevent['id']
+            logging.info('New event: %r.', newevent)
 
-    def _pre_delete_hook(self):
-        if not self.event:
+    @classmethod
+    def _pre_delete_hook(cls, key):
+        gn = key.get()
+        eventid = gn.event
+        if not eventid:
             return
 
         service = Utils.get_service(Auth)
-        calendar_id = self._get_config('calendar_id')
+        calendar_id = gn._get_config('calendar_id')
+        logging.info('Deleting event: %s', eventid)
         service.events().delete(
-            calendarId=calendar_id, eventId=self.event).execute()
+            calendarId=calendar_id, eventId=eventid).execute()
 
     def _get_config(self, key):
         conf = Config.query(Config.name==key).get()
@@ -63,7 +68,7 @@ class Gamenight(ndb.Model):
     def _make_event(self):
         start = datetime.datetime.combine(self.date, self.time)
         event = {
-            'start': { 'dateTime': self.date.strftime('%Y-%m-%dT%H:%M:%S'),
+            'start': { 'dateTime': start.strftime('%Y-%m-%dT%H:%M:%S'),
                      'timeZone': 'America/Los_Angeles' },
             'end': { 'dateTime': self.date.strftime('%Y-%m-%dT23:59:59'),
                      'timeZone': 'America/Los_Angeles' },
