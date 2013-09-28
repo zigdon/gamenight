@@ -66,6 +66,9 @@ class Gamenight(ndb.Model):
             return None
 
     def _make_event(self):
+        if not self.time:
+            self.time = datetime.time(20, 0, 0)
+
         start = datetime.datetime.combine(self.date, self.time)
         event = {
             'start': { 'dateTime': start.strftime('%Y-%m-%dT%H:%M:%S'),
