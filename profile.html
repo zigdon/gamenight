@@ -7,6 +7,8 @@
         <div class="span6">
             <fieldset>
                 <legend>Profile{% if user.superuser %}: {{ profile.key.id() }}{% endif %}</legend>
+                <label for="name">Name</label>
+                <input id="name" name="name" type="text" value="{{ profile.name }}" />
                 <label for="location">Default location</label>
                 <input id="location" name="location" type="text" value="{{ profile.location }}" />
                 <label for="location">Get email if gamenight needs scheduling?</label>
@@ -29,7 +31,7 @@
                 <legend>Users:</legend>
                 <ul>
                     {% for u in users %}
-                        <li>{{ u.key.id() }}: {{ u.nickname }}
+                        <li>{{ u.key.id() }}: {{ u.name }}
                             <button type="submit" class="close" id="edit" name="edit" value="{{ u.key.id() }}">edit</button>
                         </li>
                     {% endfor %}

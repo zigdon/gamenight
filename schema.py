@@ -310,9 +310,7 @@ class User(ndb.Model):
         if user is None:
             user = cls(id=userobj.email())
             user.name = userobj.nickname()
-
-            print "user name = '%s'" % user.name
-            if user.name in [None, 'None', ''] or user.name.find("@") > -1:
+            if user.name in [None, 'None', ''] or user.name.find("http://") > -1:
                 animals = [ 'bear', 'emu', 'zebu', 'snake', 'bird', 'awk',
                             'quahog', 'rutabaga', 'rabbit', 'dragon', 'boar',
                             'horse', 'crab', 'fish', 'libra', 'alicorn',
