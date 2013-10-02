@@ -142,8 +142,8 @@ class Invitation(ndb.Model):
         date = datetime.datetime.combine(self.date, self.time)
         if self.date == datetime.date.today():
             return self.time.strftime('Today, %I:%M %p')
-        if date - Utils.now() < datetime.timedelta(6):
-            return self.time.strftime('Saturday, %I:%M %p')
+        if datetime.timedelta(0) < date - Utils.now() < datetime.timedelta(6):
+            return date.strftime('%A, %I:%M %p')
         return date.strftime('%b %d, %I:%M %p')
 
     datetext = ndb.ComputedProperty(text_date)
