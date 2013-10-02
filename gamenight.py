@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), 'lib'))
 
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from dateutil import parser
 import jinja2
 import logging
@@ -270,11 +270,21 @@ class InvitePage(webapp2.RequestHandler):
             args[k] = self.request.get(k)
 
         error = None
+        msg = ''
         if args['when']:
             try:
                 args['when'] = parser.parse(args['when'])
             except ValueError:
                 error = 'Not sure what you mean by "%s"' % args['when']
+
+            checks = []
+            if not time(18, 0, 0) <= args['when'].time() <= time(21, 0, 0):
+                checks.append(args['when'].time().strftime('%I:%M %p'))
+            if args['when'].date().weekday() != 5:
+                checks.append(args['when'].date().strftime('%A'))
+
+            if checks:
+                msg += 'Just checking, did you really mean %s? ' % ', '.join(checks)
         else:
             error = 'When do you want to host?'
 
@@ -300,13 +310,14 @@ class InvitePage(webapp2.RequestHandler):
             gn = Gamenight.query(Gamenight.invitation==invite.key).get()
             if gn:
                 gn.update()
-                msg = 'Invitation and gamenight updated!'
+                msg += 'Invitation and gamenight updated! '
             else:
-                msg = 'Invitation updated!'
+                msg += 'Invitation updated! '
 
             self.get(msg=msg)
         else:
-            self.get(msg='Invitation created!')
+            msg += 'Invitation created! '
+            self.get(msg=msg)
 
 
 class ProfilePage(webapp2.RequestHandler):
