@@ -81,7 +81,7 @@ class MainPage(webapp2.RequestHandler):
                               'date': g.date,
                               'location': g.location }
                             for g in futurenights}
-        for week in range(1,5):
+        for week in range(0,5):
             day = (Utils.saturday() + timedelta(week*7)).date()
 
             # skip days we already have a confirmed GN
