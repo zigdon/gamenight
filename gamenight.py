@@ -402,12 +402,12 @@ class NagTask(webapp2.RequestHandler):
             message.to = message.sender
             message.subject = 'Want to host gamenight?'
             message.body = """
-Seems that no one has offered to host gamenight this week. Want to host? Go to http://TBD/invite!
+Seems that no one has offered to host gamenight this week. Want to host? Go to http://%(url)s/invite!
 
 Thanks!
 
-(You asked to get these emails if no one is hosting by Tuesday morning. If you want to stop getting these, go to http://TBD/profile and uncheck the 'nag emails' option.)
-"""
+(You asked to get these emails if no one is hosting by Tuesday morning. If you want to stop getting these, go to http://%(url)s/profile and uncheck the 'nag emails' option.)
+""" % { 'url': config.get('url', "TBD") }
 
             message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
             logging.info('Sending nag email to %r', message.to)
