@@ -83,7 +83,7 @@ class Gamenight(ndb.Model):
         return event
 
     @classmethod
-    def schedule(cls, date=None, fallback='Probably'):
+    def schedule(cls, date=None, status=None, fallback='Probably'):
         if date is None:
             date = Utils.saturday()
 
@@ -93,8 +93,25 @@ class Gamenight(ndb.Model):
                    Gamenight(status=fallback,
                              date=date,
                              lastupdate=Utils.now())
+        if status is not None and schedule.status != 'Yes':
+            schedule.status = status
+
         schedule.put()
         logging.info('Scheduling new gamenight: %r', schedule)
+
+        return schedule
+
+    @classmethod
+    def reset(cls, date=None):
+        if date is None:
+            date = Utils.saturday()
+
+        schedule = cls.query(cls.date==date).get() or \
+                   Gamenight(status='Probably',
+                             date=date,
+                             lastupdate=Utils.now())
+        schedule.put()
+        logging.info('Resetting gamenight page: %r', schedule)
 
         return schedule
 

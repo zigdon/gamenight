@@ -389,29 +389,53 @@ class MainPage(webapp2.RequestHandler):
 class ResetTask(webapp2.RequestHandler):
     @admin_only
     def get(self):
-        Gamenight.schedule()
+        Gamenight.reset()
         self.redirect('/')
 
 class NagTask(webapp2.RequestHandler):
     @admin_only
     def get(self):
-        gn = Gamenight.schedule(fallback='Maybe')
-        if gn.status != 'Yes':
-            message = mail.EmailMessage()
-            message.sender = 'Gamenight <%s>' % config.get('sender')
-            message.to = message.sender
-            message.subject = 'Want to host gamenight?'
-            message.body = """
-Seems that no one has offered to host gamenight this week. Want to host? Go to http://%(url)s/invite!
+        # don't bother starting to nag before Tuesday 10am
+        today = datetime.today()
+        if today.weekday() in (6, 0, 1):
+            logging.info('Too early in the week for nagging.')
+            self.redirect('/')
+            return
+        if today.weekday == 2 and today.hour < 10:
+            logging.info('Too early in the day for nagging.')
+            self.redirect('/')
+            return
+        status = self.request.get('status', None)
+        gn = Gamenight.schedule(status=status)
+        if gn.status == 'Yes' or not self.request.get('email', False):
+            logging.info('No need to nag.')
+            self.redirect('/')
+            return
 
-Thanks!
+        email = self.request.get('email')
+        logging.info('Sending out email template: %s', email)
+        subjects = { 'first': 'Want to host gamenight?',
+                     'second': 'Still looking to find a host for gamenight this week!' }
+        bodies = {'first': "Seems that no one has offered to host gamenight this week. " +
+                           "Want to host? Go to http://%(url)s/invite!" ,
+                  'second': "We still haven't had anyone volunteer to host gamenight this week. " +
+                            "For now, the site will show '%(status)s', but if you'd like to host, " +
+                            "please go to http://%(url)s/invite to have people come over.  ",
+                 }
 
-(You asked to get these emails if no one is hosting by Tuesday morning. If you want to stop getting these, go to http://%(url)s/profile and uncheck the 'nag emails' option.)
-""" % { 'url': config.get('url', "TBD") }
+        footer = ("\nThanks!\n\n(You asked to get these emails if no one is hosting gamenight. " +
+                  "If you want to stop getting these, go to http://%(url)s/profile and uncheck " +
+                  "the 'nag emails' option.)")
 
-            message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
-            logging.info('Sending nag email to %r', message.to)
-            message.send()
+        message = mail.EmailMessage()
+        message.sender = 'Gamenight <%s>' % config.get('sender')
+        message.to = message.sender
+        message.subject = subjects[email]
+        message.body = (bodies[email] + footer) % { 'url': config.get('url', "TBD"), 'status': status }
+
+        message.bcc = [u.key.id() for u in User.query(User.nag==True).fetch()]
+        logging.info('Sending nag email to %r', message.to)
+        message.send()
 
         self.redirect('/')
 
