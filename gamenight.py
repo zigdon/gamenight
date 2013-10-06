@@ -433,17 +433,17 @@ class TestCal(webapp2.RequestHandler):
 debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
+    ('/apiauth', ApiAuth),
+    ('/config', ConfigPage),
     ('/invite', InvitePage),
     ('/profile', ProfilePage),
     ('/schedule', SchedulePage),
-    ('/config', ConfigPage),
-    ('/apiauth', ApiAuth),
     (decorator.callback_path, decorator.callback_handler()),
 ], debug=debug)
 
 cron = webapp2.WSGIApplication([
-    ('/tasks/reset', ResetTask),
     ('/tasks/nag', NagTask),
+    ('/tasks/reset', ResetTask),
     ('/tasks/test', TestCal),
 ], debug=debug)
 
