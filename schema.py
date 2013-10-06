@@ -83,12 +83,12 @@ class Gamenight(ndb.Model):
         return event
 
     @classmethod
-    def schedule(cls, date=None, status=None, fallback='Probably'):
+    def schedule(cls, date=None, status=None, fallback='Probably', priority=None):
         if date is None:
             date = Utils.saturday()
 
         schedule = cls.query(cls.date==date).filter(cls.status=='Yes').get() or \
-                   Invitation.resolve(when=date) or \
+                   Invitation.resolve(when=date, priority=priority) or \
                    cls.query(cls.date==date).get() or \
                    Gamenight(status=fallback,
                              date=date,
@@ -106,7 +106,9 @@ class Gamenight(ndb.Model):
         if date is None:
             date = Utils.saturday()
 
-        schedule = cls.query(cls.date==date).get() or \
+
+        schedule = Invitation.resolve(when=date, priority='Insist') or \
+                   cls.query(cls.date==date).get() or \
                    Gamenight(status='Probably',
                              date=date,
                              lastupdate=Utils.now())
@@ -179,7 +181,7 @@ class Invitation(ndb.Model):
         return ndb.Key(cls, 'root')
 
     @classmethod
-    def resolve(cls, when=Utils.saturday(), history=4):
+    def resolve(cls, when=Utils.saturday(), history=4, priority=None):
         """Figure out where GN should be at the given date.
 
         By default, consider the last 4 to give preference to people who
@@ -193,9 +195,10 @@ class Invitation(ndb.Model):
         invitations = cls.query(cls.date == when)
         logging.debug('Query: %r' % invitations)
 
+        priorities = (priority,) or ('Insist', 'Want', 'Can')
         candidates = []
         # check each level separately
-        for pri in ('Insist', 'Want', 'Can'):
+        for pri in priorities:
             candidates = dict([(x.owner.id(), x) for x in
                     invitations.filter(cls.priority == pri).fetch()])
 

@@ -387,26 +387,21 @@ class MainPage(webapp2.RequestHandler):
 
 # tasks
 class ResetTask(webapp2.RequestHandler):
-    @admin_only
     def get(self):
         Gamenight.reset()
         self.redirect('/')
 
 class NagTask(webapp2.RequestHandler):
-    @admin_only
     def get(self):
         # don't bother starting to nag before Tuesday 10am
         today = datetime.today()
-        if today.weekday() in (6, 0, 1):
-            logging.info('Too early in the week for nagging.')
-            self.redirect('/')
-            return
-        if today.weekday == 2 and today.hour < 10:
-            logging.info('Too early in the day for nagging.')
-            self.redirect('/')
-            return
+        priority = None
+        if today.weekday() in (6, 0, 1, 2):
+            logging.info('Only checking high priority invites.')
+            priority = 'Insist'
+
         status = self.request.get('status', None)
-        gn = Gamenight.schedule(status=status)
+        gn = Gamenight.schedule(status=status, priority=priority)
         if gn.status == 'Yes' or not self.request.get('email', False):
             logging.info('No need to nag.')
             self.redirect('/')
