@@ -30,16 +30,6 @@ decorator = OAuth2Decorator(
                 scope='https://www.googleapis.com/auth/calendar')
 
 
-def logged_in(func):
-    def dec(self, **kwargs):
-        sys_user = users.get_current_user()
-        if not sys_user:
-            self.redirect(users.create_login_url(self.request.uri))
-            return
-
-        return func(self, **kwargs)
-    return dec
-
 def admin_only(func):
     def dec(self, **kwargs):
         sys_user = users.get_current_user()
@@ -56,98 +46,30 @@ def admin_only(func):
     return dec
 
 
-class MainPage(webapp2.RequestHandler):
+def logged_in(func):
+    def dec(self, **kwargs):
+        sys_user = users.get_current_user()
+        if not sys_user:
+            self.redirect(users.create_login_url(self.request.uri))
+            return
+
+        return func(self, **kwargs)
+    return dec
+
+
+class ApiAuth(webapp2.RequestHandler):
+    @admin_only
+    @decorator.oauth_aware
     def get(self):
-        futurenights = Gamenight.future(10)
+        if not decorator.has_credentials():
+            self.redirect(decorator.authorize_url())
+            return
 
-        if futurenights and futurenights[0].this_week():
-            # we have a gamenight scheduled for this week
-            gamenight = futurenights[0]
-            if len(futurenights) > 1:
-                futurenights = futurenights[1:]
-            else:
-                futurenights = []
-        else:
-            gamenight = Gamenight(status='Probably',
-                             date=Utils.saturday(),
-                             lastupdate=Utils.now())
-            futurenights = []
+        auth = Auth.get_or_insert('auth')
+        auth.credentials = decorator.get_credentials()
+        auth.put()
 
-        updated = gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p')
-
-        invites = Invitation.summary()
-
-        upcoming = {g.date: { 'type': 'gamenight',
-                              'date': g.date,
-                              'location': g.location }
-                            for g in futurenights}
-        for week in range(0,5):
-            day = (Utils.saturday() + timedelta(week*7)).date()
-
-            # skip days we already have a confirmed GN
-            if upcoming.get(day, False):
-                continue
-
-            summary = invites.get(day, False)
-            if summary:
-                upcoming[day] = { 'type': 'invites',
-                                  'date': day,
-                                  'invitations': summary }
-                continue
-
-            upcoming[day] = { 'date': day }
-
-        template_values = {
-          'future': sorted(upcoming.values(), key=lambda x: x['date']),
-          'status': gamenight.status,
-          'updated': updated,
-        }
-
-        if gamenight.date and gamenight.time:
-            template_values['when'] = datetime.combine(gamenight.date, gamenight.time).strftime('%I:%M %p')
-
-        if gamenight.location:
-            template_values['where'] =  gamenight.location
-
-        if gamenight.notes:
-            template_values['notes'] =  gamenight.notes
-
-        template = JINJA_ENVIRONMNT.get_template('index.html')
-        # Write the submission form and the footer of the page
-        self.response.write(template.render(template_values))
-
-
-class SchedulePage(webapp2.RequestHandler):
-    def get(self):
-        days = defaultdict(dict)
-        for gn in Gamenight.future(10):
-            days[gn.date]['date'] = gn.date
-            days[gn.date]['scheduled'] = True
-            days[gn.date]['owner'] = gn.owner
-            days[gn.date]['time'] = gn.time
-            days[gn.date]['where'] = gn.location
-
-        invitations = Invitation.query(Invitation.date >= Utils.now()).\
-                          order(Invitation.date).iter()
-        for invite in invitations:
-            if not days[invite.date].get('invitations'):
-                days[invite.date]['date'] = invite.date
-                days[invite.date]['invitations'] = []
-
-            days[invite.date]['invitations'].append(invite)
-
-        day_sorter = lambda x: x.get('date')
-        template_values = { 'days': sorted(days.values(), key=day_sorter) }
-        current_user = users.get_current_user()
-        if current_user:
-            user = User.get(users.get_current_user())
-            template_values.update({
-                'logout': users.create_logout_url('/'),
-                'user': user,
-            })
-
-        template = JINJA_ENVIRONMNT.get_template('schedule.html')
-        self.response.write(template.render(template_values))
+        self.redirect('/config')
 
 
 class ConfigPage(webapp2.RequestHandler):
@@ -369,6 +291,100 @@ class ProfilePage(webapp2.RequestHandler):
         self.get(msg='Profile updated!', profile=profile.key.id())
 
 
+class SchedulePage(webapp2.RequestHandler):
+    def get(self):
+        days = defaultdict(dict)
+        for gn in Gamenight.future(10):
+            days[gn.date]['date'] = gn.date
+            days[gn.date]['scheduled'] = True
+            days[gn.date]['owner'] = gn.owner
+            days[gn.date]['time'] = gn.time
+            days[gn.date]['where'] = gn.location
+
+        invitations = Invitation.query(Invitation.date >= Utils.now()).\
+                          order(Invitation.date).iter()
+        for invite in invitations:
+            if not days[invite.date].get('invitations'):
+                days[invite.date]['date'] = invite.date
+                days[invite.date]['invitations'] = []
+
+            days[invite.date]['invitations'].append(invite)
+
+        day_sorter = lambda x: x.get('date')
+        template_values = { 'days': sorted(days.values(), key=day_sorter) }
+        current_user = users.get_current_user()
+        if current_user:
+            user = User.get(users.get_current_user())
+            template_values.update({
+                'logout': users.create_logout_url('/'),
+                'user': user,
+            })
+
+        template = JINJA_ENVIRONMNT.get_template('schedule.html')
+        self.response.write(template.render(template_values))
+
+
+class MainPage(webapp2.RequestHandler):
+    def get(self):
+        futurenights = Gamenight.future(10)
+
+        if futurenights and futurenights[0].this_week():
+            # we have a gamenight scheduled for this week
+            gamenight = futurenights[0]
+            if len(futurenights) > 1:
+                futurenights = futurenights[1:]
+            else:
+                futurenights = []
+        else:
+            gamenight = Gamenight(status='Probably',
+                             date=Utils.saturday(),
+                             lastupdate=Utils.now())
+            futurenights = []
+
+        updated = gamenight.lastupdate.strftime('%A, %B %d, %I:%M %p')
+
+        invites = Invitation.summary()
+
+        upcoming = {g.date: { 'type': 'gamenight',
+                              'date': g.date,
+                              'location': g.location }
+                            for g in futurenights}
+        for week in range(0,5):
+            day = (Utils.saturday() + timedelta(week*7)).date()
+
+            # skip days we already have a confirmed GN
+            if upcoming.get(day, False):
+                continue
+
+            summary = invites.get(day, False)
+            if summary:
+                upcoming[day] = { 'type': 'invites',
+                                  'date': day,
+                                  'invitations': summary }
+                continue
+
+            upcoming[day] = { 'date': day }
+
+        template_values = {
+          'future': sorted(upcoming.values(), key=lambda x: x['date']),
+          'status': gamenight.status,
+          'updated': updated,
+        }
+
+        if gamenight.date and gamenight.time:
+            template_values['when'] = datetime.combine(gamenight.date, gamenight.time).strftime('%I:%M %p')
+
+        if gamenight.location:
+            template_values['where'] =  gamenight.location
+
+        if gamenight.notes:
+            template_values['notes'] =  gamenight.notes
+
+        template = JINJA_ENVIRONMNT.get_template('index.html')
+        # Write the submission form and the footer of the page
+        self.response.write(template.render(template_values))
+
+
 # tasks
 class ResetTask(webapp2.RequestHandler):
     @admin_only
@@ -400,36 +416,6 @@ Thanks!
         self.redirect('/')
 
 
-class ApiAuth(webapp2.RequestHandler):
-    @admin_only
-    @decorator.oauth_aware
-    def get(self):
-        if not decorator.has_credentials():
-            self.redirect(decorator.authorize_url())
-            return
-
-        auth = Auth.get_or_insert('auth')
-        auth.credentials = decorator.get_credentials()
-        auth.put()
-
-        self.redirect('/config')
-
-class TestCal(webapp2.RequestHandler):
-    @admin_only
-    def get(self):
-        service = Utils.get_service()
-        response = service.calendarList().list().execute()
-
-        callist = [(x.get('id'), x.get('summary'), x.get('description')) for x in response['items']]
-        print pformat(callist)
-        message = mail.EmailMessage()
-        message.sender = 'Gamenight <%s>' % config.get('sender')
-        message.to = message.sender
-        message.subject = 'Calendar list'
-        message.body = pformat(callist)
-        message.send()
-
-
 debug = True
 application = webapp2.WSGIApplication([
     ('/', MainPage),
@@ -444,7 +430,6 @@ application = webapp2.WSGIApplication([
 cron = webapp2.WSGIApplication([
     ('/tasks/nag', NagTask),
     ('/tasks/reset', ResetTask),
-    ('/tasks/test', TestCal),
 ], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:
