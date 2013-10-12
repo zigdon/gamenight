@@ -386,16 +386,6 @@ class MainPage(webapp2.RequestHandler):
 
 
 # tasks
-class ScheduleTask(webapp2.RequestHandler):
-    def get(self):
-        Gamenight.schedule()
-        self.redirect('/')
-
-class ResetTask(webapp2.RequestHandler):
-    def get(self):
-        Gamenight.reset()
-        self.redirect('/')
-
 class NagTask(webapp2.RequestHandler):
     def get(self):
         # don't bother starting to nag before Tuesday 10am
@@ -437,6 +427,16 @@ class NagTask(webapp2.RequestHandler):
         logging.info('Sending nag email to %r', message.to)
         message.send()
 
+        self.redirect('/')
+
+class ResetTask(webapp2.RequestHandler):
+    def get(self):
+        Gamenight.reset()
+        self.redirect('/')
+
+class ScheduleTask(webapp2.RequestHandler):
+    def get(self):
+        Gamenight.schedule()
         self.redirect('/')
 
 
