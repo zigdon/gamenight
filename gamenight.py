@@ -386,6 +386,11 @@ class MainPage(webapp2.RequestHandler):
 
 
 # tasks
+class ScheduleTask(webapp2.RequestHandler):
+    def get(self):
+        Gamenight.schedule()
+        self.redirect('/')
+
 class ResetTask(webapp2.RequestHandler):
     def get(self):
         Gamenight.reset()
@@ -449,6 +454,7 @@ application = webapp2.WSGIApplication([
 cron = webapp2.WSGIApplication([
     ('/tasks/nag', NagTask),
     ('/tasks/reset', ResetTask),
+    ('/tasks/schedule', ScheduleTask),
 ], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:
