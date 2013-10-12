@@ -195,7 +195,10 @@ class Invitation(ndb.Model):
         invitations = cls.query(cls.date == when)
         logging.debug('Query: %r' % invitations)
 
-        priorities = (priority,) or ('Insist', 'Want', 'Can')
+        if priority is not None:
+            priorities = (priority,)
+        else:
+            priorities = ('Insist', 'Want', 'Can')
         candidates = []
         # check each level separately
         for pri in priorities:
