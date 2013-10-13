@@ -167,7 +167,7 @@ class Invitation(ndb.Model):
 
     datetext = ndb.ComputedProperty(text_date)
 
-    text_pri = { 'Can': 'Could host',
+    text_pri = { 'Can': 'Happy to host',
                  'Want': 'Want to host',
                  'Insist': 'Would really want to host' }
     priority_text = ndb.ComputedProperty(lambda self: self.text_pri[self.priority])
