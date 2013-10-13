@@ -297,6 +297,7 @@ class SchedulePage(webapp2.RequestHandler):
         for gn in Gamenight.future(10):
             days[gn.date]['date'] = gn.date
             days[gn.date]['scheduled'] = True
+            days[gn.date]['status'] = gn.status
             days[gn.date]['owner'] = gn.owner
             days[gn.date]['time'] = gn.time
             days[gn.date]['where'] = gn.location
