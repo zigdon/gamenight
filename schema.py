@@ -29,21 +29,27 @@ class Gamenight(ndb.Model):
 
         service = Utils.get_service(Auth)
         calendar_id = self._get_config('calendar_id')
-        if self.event:
-            logging.info('Updating event for %s.', self.date)
-            event = service.events().get(calendarId=calendar_id,
-                                         eventId=self.event).execute()
-            event.update(self._make_event())
-            service.events().update(calendarId=calendar_id,
-                                    eventId=self.event,
-                                    body=event).execute()
+        if self.status == 'Yes':
+            if self.event:
+                logging.info('Updating event for %s.', self.date)
+                event = service.events().get(calendarId=calendar_id,
+                                             eventId=self.event).execute()
+                event.update(self._make_event())
+                service.events().update(calendarId=calendar_id,
+                                        eventId=self.event,
+                                        body=event).execute()
+            else:
+                logging.info('Creating new event for %s.', self.date)
+                event = self._make_event()
+                newevent = service.events().insert(calendarId=calendar_id,
+                                                       body=event).execute()
+                self.event = newevent['id']
+                logging.info('New event: %r.', newevent)
         else:
-            logging.info('Creating new event for %s.', self.date)
-            event = self._make_event()
-            newevent = service.events().insert(calendarId=calendar_id,
-                                                   body=event).execute()
-            self.event = newevent['id']
-            logging.info('New event: %r.', newevent)
+            if self.event:
+                logging.info('Deleting event for %s.', self.date)
+                service.events().delete(
+                    calendarId=calendar_id, eventId=event).execute()
 
     @classmethod
     def _pre_delete_hook(cls, key):
