@@ -391,19 +391,19 @@ class NagTask(webapp2.RequestHandler):
     def get(self):
         # don't bother starting to nag before Tuesday 10am
         today = datetime.today()
+        email = self.request.get('email', False)
         priority = None
-        if today.weekday() in (6, 0, 1, 2):
+        if today.weekday() in (6, 0, 1, 2) and not email:
             logging.debug('Only checking high priority invites.')
             priority = 'Insist'
 
         status = self.request.get('status', None)
         gn = Gamenight.schedule(status=status, priority=priority)
-        if gn.status == 'Yes' or not self.request.get('email', False):
+        if gn.status == 'Yes' or not email:
             logging.debug('No need to nag.')
             self.redirect('/')
             return
 
-        email = self.request.get('email')
         logging.debug('Sending out email template: %s', email)
         subjects = { 'first': 'Want to host gamenight?',
                      'second': 'Still looking to find a host for gamenight this week!' }
