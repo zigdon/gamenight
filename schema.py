@@ -90,8 +90,16 @@ class Gamenight(ndb.Model):
 
     @classmethod
     def schedule(cls, date=None, status=None, fallback='Probably', priority=None):
+        # If no date is specified, look for the next invitation that is no
+        # later than saturday
         if date is None:
-            date = Utils.saturday()
+            upcoming = Invitation.query().order(Invitation.date).get()
+            if upcoming is None or upcoming.date > Utils.saturday().date():
+                logging.info('No future invitation found.')
+                return None
+            else:
+                date = upcoming.date
+
 
         schedule = cls.query(cls.date==date).filter(cls.status=='Yes').get() or \
                    Invitation.resolve(when=date, priority=priority) or \
