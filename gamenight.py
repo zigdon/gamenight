@@ -208,7 +208,7 @@ class InvitePage(webapp2.RequestHandler):
                 checks.append(args['when'].date().strftime('%x'))
 
             if checks:
-                msg += 'Just checking, did you really mean <strong>%s</strong>?' % ', '.join(checks)
+                msg += 'Just checking, did you really mean %s? ' % ', '.join(checks)
         else:
             error = 'When do you want to host?'
 
