@@ -373,7 +373,7 @@ class MainPage(webapp2.RequestHandler):
         }
 
         if gamenight.date and gamenight.time:
-            template_values['when'] = datetime.combine(gamenight.date, gamenight.time).strftime('%I:%M %p')
+            template_values['when'] = datetime.combine(gamenight.date, gamenight.time).strftime('%A, %I:%M %p')
 
         if gamenight.location:
             template_values['where'] =  gamenight.location
