@@ -395,7 +395,8 @@ class NagTask(webapp2.RequestHandler):
         today = datetime.today()
         email = self.request.get('email', False)
         priority = None
-        if today.weekday() in (6, 0, 1, 2) and not email:
+        # sun-tue only check high priority
+        if today.weekday() in (6, 0, 1) and not email:
             logging.debug('Only checking high priority invites.')
             priority = 'Insist'
 
@@ -403,6 +404,13 @@ class NagTask(webapp2.RequestHandler):
         gn = Gamenight.schedule(status=status, priority=priority)
         if gn and gn.status == 'Yes' or not email:
             logging.debug('No need to nag.')
+            self.redirect('/')
+            return
+
+        # saturday afternoon just give up and say no
+        if today.weekday() == 5 and today.hour > 16:
+            logging.debug('Giving up on scheduling this week.')
+            gn = Gamenight.schedule(status='No', date=today.date())
             self.redirect('/')
             return
 
