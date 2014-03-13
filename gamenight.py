@@ -401,7 +401,7 @@ class NagTask(webapp2.RequestHandler):
 
         status = self.request.get('status', None)
         gn = Gamenight.schedule(status=status, priority=priority)
-        if gn.status == 'Yes' or not email:
+        if gn and gn.status == 'Yes' or not email:
             logging.debug('No need to nag.')
             self.redirect('/')
             return
