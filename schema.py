@@ -160,7 +160,7 @@ class Gamenight(ndb.Model):
 
 
     def is_this_week(self):
-        return self.date - Utils.now().today() < datetime.timedelta(7)
+        return self.date - Utils.now().today().date() < datetime.timedelta(7)
 
 
 class Invitation(ndb.Model):
