@@ -195,7 +195,7 @@ class InvitePage(webapp2.RequestHandler):
         msg = ''
         if args['when']:
             try:
-                args['when'] = parser.parse(args['when'])
+                args['when'] = parser.parse(args['when'].replace('today', ''))
             except ValueError:
                 error = 'Not sure what you mean by "%s"' % args['when']
                 logging.error('Failed to parse when: %s', args['when'])
