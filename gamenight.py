@@ -198,17 +198,18 @@ class InvitePage(webapp2.RequestHandler):
                 args['when'] = parser.parse(args['when'])
             except ValueError:
                 error = 'Not sure what you mean by "%s"' % args['when']
+                logging.error('Failed to parse when: %s', args['when'])
+            else:
+                checks = []
+                if not time(18, 0, 0) <= args['when'].time() <= time(21, 0, 0):
+                    checks.append(args['when'].time().strftime('%I:%M %p'))
+                if args['when'].date().weekday() != 5:
+                    checks.append(args['when'].date().strftime('%A'))
+                if args['when'].date() < Utils.now().date():
+                    checks.append(args['when'].date().strftime('%x'))
 
-            checks = []
-            if not time(18, 0, 0) <= args['when'].time() <= time(21, 0, 0):
-                checks.append(args['when'].time().strftime('%I:%M %p'))
-            if args['when'].date().weekday() != 5:
-                checks.append(args['when'].date().strftime('%A'))
-            if args['when'].date() < Utils.now().date():
-                checks.append(args['when'].date().strftime('%x'))
-
-            if checks:
-                msg += 'Just checking, did you really mean %s? ' % ', '.join(checks)
+                if checks:
+                    msg += 'Just checking, did you really mean %s? ' % ', '.join(checks)
         else:
             error = 'When do you want to host?'
 
