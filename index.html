@@ -6,9 +6,13 @@
         <link type="text/css" rel="stylesheet" href="/resources/main.css" />
         <meta property="og:title" content="Is there a game night this week?" />
         {% if status == 'Yes' %}
-            <meta property="og:description" content="*Yes.* {{ where }} {{ when }} {{ notes }}" />
+            {% if notes %}
+                <meta property="og:description" content="Yes! {{ where }} - {{ when }} - {{ notes }}" />
+            {% else %}
+                <meta property="og:description" content="Yes! {{ where }} - {{ when }}" />
+            {% endif %}
         {% else %}
-            <meta property="og:description" content="*{{ status }}.*" />
+            <meta property="og:description" content="{{ status }}" />
         {% endif %}
     </head>
     <body>
