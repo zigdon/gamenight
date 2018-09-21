@@ -192,6 +192,7 @@ class InvitePage(webapp2.RequestHandler):
             args[k] = self.request.get(k)
 
         error = None
+        warning = None
         msg = ''
         if args['when']:
             try:
@@ -211,7 +212,7 @@ class InvitePage(webapp2.RequestHandler):
                     checks.append(args['when'].date().strftime('%x'))
 
                 if checks:
-                    msg += 'Just checking, did you really mean %s? ' % ', '.join(checks)
+                    warning = 'Just checking, did you really mean %s?' % ', '.join(checks)
         else:
             error = 'When do you want to host?'
 
@@ -241,10 +242,10 @@ class InvitePage(webapp2.RequestHandler):
             else:
                 msg += 'Invitation updated! '
 
-            self.get(msg=msg)
+            self.get(msg=msg, error=warning)
         else:
             msg += 'Invitation created! '
-            self.get(msg=msg)
+            self.get(msg=msg, error=warning)
 
 
 class ProfilePage(webapp2.RequestHandler):
