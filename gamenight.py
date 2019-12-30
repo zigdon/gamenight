@@ -113,6 +113,7 @@ class ConfigPage(webapp2.RequestHandler):
                 elif flags[name] is None:
                     err.append("Failed to update %s." % name)
             else:
+                logging.info("Deleting key '%s'..." % name)
                 Config.query(Config.name==name).get().key.delete()
                 del(config[name])
                 msg.append("'%s' deleted." % name)
