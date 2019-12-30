@@ -12,4 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google OAuth 2.0 Library for Python."""
+"""Google Auth Library for Python."""
+
+import logging
+
+from google.auth._default import default
+
+
+__all__ = ["default"]
+
+
+# Set default logging handler to avoid "No handler found" warnings.
+logging.getLogger(__name__).addHandler(logging.NullHandler())

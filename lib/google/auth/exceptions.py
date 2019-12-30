@@ -12,4 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google OAuth 2.0 Library for Python."""
+"""Exceptions used in the google.auth package."""
+
+
+class GoogleAuthError(Exception):
+    """Base class for all google.auth errors."""
+
+
+class TransportError(GoogleAuthError):
+    """Used to indicate an error occurred during an HTTP request."""
+
+
+class RefreshError(GoogleAuthError):
+    """Used to indicate that an refreshing the credentials' access token
+    failed."""
+
+
+class DefaultCredentialsError(GoogleAuthError):
+    """Used to indicate that acquiring default credentials failed."""

@@ -12,4 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Google OAuth 2.0 Library for Python."""
+"""Google Compute Engine authentication."""
+
+from google.auth.compute_engine.credentials import Credentials
+from google.auth.compute_engine.credentials import IDTokenCredentials
+
+
+__all__ = ["Credentials", "IDTokenCredentials"]

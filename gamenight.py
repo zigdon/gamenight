@@ -61,6 +61,7 @@ class ApiAuth(webapp2.RequestHandler):
     @admin_only
     @decorator.oauth_aware
     def get(self):
+        logging.info("decorator: %r", decorator)
         if not decorator.has_credentials():
             self.redirect(decorator.authorize_url())
             return
