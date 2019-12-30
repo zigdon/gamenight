@@ -33,7 +33,7 @@ class Utils:
 
         http = creds.authorize(httplib2.Http())
         creds.refresh(http)
-        service = build('calendar', 'v3', http=http)
+        service = build('calendar', 'v3', credentials=creds)
         return service
 
 class Pacific_tzinfo(datetime.tzinfo):
