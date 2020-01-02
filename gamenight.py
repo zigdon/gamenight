@@ -378,6 +378,7 @@ class MainPage(webapp2.RequestHandler):
           'future': sorted(upcoming.values(), key=lambda x: x['date']),
           'status': gamenight.status,
           'updated': updated,
+          'calendar_url': urllib.quote_plus(config.get('calendar_id')),
         }
 
         if gamenight.date and gamenight.time:
