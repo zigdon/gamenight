@@ -463,21 +463,32 @@ class ScheduleTask(webapp2.RequestHandler):
         self.redirect('/')
 
 
-debug = True
-application = webapp2.WSGIApplication([
-    ('/', MainPage),
-    ('/apiauth', ApiAuth),
-    ('/config', ConfigPage),
-    ('/invite', InvitePage),
-    ('/profile', ProfilePage),
-    ('/schedule', SchedulePage),
-    (decorator.callback_path, decorator.callback_handler()),
-], debug=debug)
+debug = False
+if 'peeron' in config.get('calendar_id'):
+    application = webapp2.WSGIApplication([
+        ('/', MainPage),
+        ('/apiauth', MainPage),
+        ('/config', MainPage),
+        ('/invite', MainPage),
+        ('/profile', MainPage),
+        ('/schedule', MainPage),
+        (decorator.callback_path, decorator.callback_handler()),
+    ], debug=debug)
+else:
+    application = webapp2.WSGIApplication([
+        ('/', MainPage),
+        ('/apiauth', ApiAuth),
+        ('/config', ConfigPage),
+        ('/invite', InvitePage),
+        ('/profile', ProfilePage),
+        ('/schedule', SchedulePage),
+        (decorator.callback_path, decorator.callback_handler()),
+    ], debug=debug)
 
-cron = webapp2.WSGIApplication([
-    ('/tasks/nag', NagTask),
-    ('/tasks/reset', ResetTask),
-    ('/tasks/schedule', ScheduleTask),
-], debug=debug)
+    cron = webapp2.WSGIApplication([
+        ('/tasks/nag', NagTask),
+        ('/tasks/reset', ResetTask),
+        ('/tasks/schedule', ScheduleTask),
+    ], debug=debug)
 
 # vim: set ts=4 sts=4 sw=4 et:
