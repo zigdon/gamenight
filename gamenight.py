@@ -390,7 +390,12 @@ class MainPage(webapp2.RequestHandler):
         if gamenight.notes:
             template_values['notes'] =  gamenight.notes
 
-        template = JINJA_ENVIRONMNT.get_template('index.html')
+        if 'peeron' in config.get('calendar_id'):
+            tmpl_file = 'index-old.html'
+        else:
+            tmpl_file = 'index.html'
+
+        template = JINJA_ENVIRONMNT.get_template(tmpl_file)
         # Write the submission form and the footer of the page
         self.response.write(template.render(template_values))
 
