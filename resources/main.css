@@ -28,6 +28,12 @@ a {
     color: #0000b0;
 }
 
+.notice {
+    margin-left:20%;
+    margin-right:20%;
+    text-align: center;
+}
+
 .msg {
     width: 100%;
     text-align: center;
