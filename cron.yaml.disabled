@@ -1,0 +1,17 @@
+cron:
+- description: Reset page
+  url: /tasks/reset
+  schedule: every sunday 03:00
+  timezone: America/Los_Angeles
+- description: Monitor invitations
+  url: /tasks/nag
+  schedule: every 1 hours
+  timezone: America/Los_Angeles
+- description: Send first nag email
+  url: /tasks/nag?email=first
+  schedule: every tuesday 10:00
+  timezone: America/Los_Angeles
+- description: Send second nag email
+  url: /tasks/nag?email=second&status=Maybe
+  schedule: every friday 10:00
+  timezone: America/Los_Angeles
