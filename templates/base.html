@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-{% autoescape true %}
 <html lang="en">
 <head>
-<title>{% block title %}{% endblock %}</title>
+<title>{{ template "Title" }}</title>
 <link type="text/css" rel="stylesheet" href="/resources/main.css" />
 <link type="text/css" rel="stylesheet"
   href="/resources/bootstrap/css/bootstrap.css" />
@@ -20,13 +19,13 @@
                         <div class="nav-collapse collapse navbar-responsive-collapse">
                             <ul class="nav">
                                     <li><a href="/">Home</a></li>
-                                    <li {% if tab == 'invite' %}class="active"{% endif %}>
+                                    <li {{ if .Tab eq "invite" }}class="active"{{ end }}>
                                         <a href="/invite">Invitations</a></li>
-                                    <li {% if tab == 'schedule' %}class="active"{% endif %}>
+                                    <li {{ if .Tab eq "schedule" }}class="active"{{ end }}>
                                         <a href="/schedule">Schedule</a></li><br />
                                 </ul>
                                 <ul class="nav pull-right">
-                                    {% if user.superuser %}
+                                    {{ if .User.Superuser }}
                                         <li class="dropdown">
                                              <a data-toggle="dropdown" class="dropdown-toggle" href="#">Admin<strong class="caret"></strong></a>
                                             <ul class="dropdown-menu">
@@ -37,16 +36,16 @@
                                                 <li><a href="/apiauth">Reset API key</a></li>
                                             </ul>
                                         </li>
-                                    {% endif %}
+                                    {{ end }}
                                     <li class="divider-vertical"></li>
-                                    <li class="dropdown{% if tab == 'profile' %} active{% endif %}">
-                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ user.name }}<strong class="caret"></strong></a>
+                                    <li class="dropdown{{ if .Tab eq "profile" }} active{{ end }}">
+                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .User.Name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="/profile">Profile{% if user.superuser %} and users{% endif %}</a>
+                                                <a href="/profile">Profile{{ if .User.Superuser }} and users{{ end }}</a>
                                             </li>
                                             <li>
-                                                <a href="{{ logout }}">Log out</a>
+                                                <a href="{{ .Logout }}">Log out</a>
                                             </li>
                                         </ul>
                                     </li>
@@ -57,24 +56,23 @@
                 </div>
             </div>
         </div>
-        {% if error %}
+        {{ if .Error }}
             <div class="alert">
                 <button type="button" class="close" data-dismiss="alert">×</button>
                 <h4>Message</h4>
-                {{ error }}
+                {{ .Error }}
             </div>
-        {% endif %}
-        {% if msg %}
+        {{ end }}
+        {{ if .Msg }}
             <div class="alert-info">
                 <button type="button" class="close" data-dismiss="alert">×</button>
                 <h4>Message</h4>
-                {{ msg }}
+                {{ .Msg }}
             </div>
-        {% endif %}
-        {% block content %}{% endblock %}
+        {{ end }}
+        {{ template "Content" }}
     </div>
 </body>
-{% endautoescape %}
-{# vim: set ts=4 sts=4 sw=4 et: #}
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}
 </html>
 

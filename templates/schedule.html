@@ -1,0 +1,35 @@
+{{ template "base.html" }}
+{{ $tab := "schedule" }}
+{{ define "title" }}Upcoming gamenight{{ end }}
+{{ define "content" }}
+<div class="row-fluid">
+    <div class="span12">
+        {{ range $day := .Days }}
+            <div class="row-fluid">
+                <div class="span12">
+                    <h3 class="muted"> {{ $day.Date }} </h3>
+                    <ul>
+                        {{ if $day.Scheduled }}
+                            {{ if $day.Status eq 1 }}
+                                <li class="scheduled">
+                                    {{ $day.Owner.Name }}: {{ $day.Time }} @ {{ $day.Where }}
+                                </li>
+                            {{ else }}
+                                <li class="missing">None scheduled yet.</li>
+                            {{ end }}
+                        {{ end }}
+                        {{ range $invite := $day.Invitations }}
+                            <li>
+                                {{ $invite.Owner.Name }} @
+                                {{ $invite.Location }}
+                                ({{ $invite.Priority_text }})
+                            </li>
+                        {{ end }}
+                    </ul>
+                </div>
+            </div>
+        {{ end }}
+    </div>
+</div>
+{{ end }}
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}

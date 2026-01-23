@@ -1,7 +1,7 @@
-{% extends "base.html" %}
-{% set tab = 'invite' %}
-{% block title %}Offer to host gamenight{% endblock %}
-{% block content %}
+{{ template "base.html" }}
+{{ $tab := "invite" }}
+{{ define "title" }}Offer to host gamenight{{ end }}
+{{ define "content" }}
 <form method="post">
     <div class="row-fluid">
         <div class="span6">
@@ -10,11 +10,11 @@
                  <label for="when">When</label>
                  <span class="help-block">Date and time.</span>
                  <input id="when" name="when" type="text" 
-                        placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ when }}" />
+                        placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ .When }}" />
                  <label for="where">Where</label>
                  <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
                  <input id="where" name="where" type="text" 
-                        placeholder="My house" value="{{ where }}" />
+                        placeholder="My house" value="{{ .Where }}" />
                  <label for="notes">Notes</label>
                  <span class="help-block">Anything else you'd like to tell us.</span>
                  <input id="notes" name="notes" type="text" />
@@ -29,24 +29,24 @@
             </fieldset>
         </div>
         <div class="span6">
-            {% if invitations %}
+            {{ if .Invitations }}
                 <legend>Current invitations</legend>
                 <ol>
-                    {% for invite in invitations %}
+                    {{ range $invite := .Invitations }}
                         <li>
-                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ invite.key.id() }}">x</button>
-                            {% if user.superuser %}
-                                {{ invite.owner.get().name }} -
-                            {% endif %}
-                            {{ invite.datetext }} @
-                            {{ invite.location }} ({{ invite.priority_text }}).
-                            {% if invite.notes %}
-                                <br /><small>{{ invite.notes }}</small>
-                            {% endif %}
+                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ $invite.key.id }}">x</button>
+                            {{ if .User.Superuser }}
+                                {{ $invite.Owner.Name }} -
+                            {{ end }}
+                            {{ $invite.Date }} @
+                            {{ $invite.Location }} ({{ $invite.Priority_text }}).
+                            {{ if $invite.Notes }}
+                                <br /><small>{{ $invite.Notes }}</small>
+                            {{ end }}
                         </li>
-                    {% endfor %}
+                    {{ end }}
                 </ol>
-            {% endif %}
+            {{ end }}
             <legend>What does this all mean?</legend>
             <p>We're trying to make it easier to schedule and know where
             gamenight is going to be every week, and know earlier when one is
@@ -68,5 +68,5 @@
         </div>
     </div>
 </form>
-{% endblock %}
-{# vim: set ts=4 sts=4 sw=4 et: #}
+{{ end }}
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}

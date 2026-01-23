@@ -1,0 +1,44 @@
+{{ template "base.html" }}
+{{ $tab := "profile" }}
+{{ define "title" }}Gamenight host profile{{ end }}
+{{ define "content" }}
+<form method="post">
+    <div class="row-fluid">
+        <div class="span6">
+            <fieldset>
+                <legend>Profile{{ if .User.Superuser }}: {{ .Profile.Id }}{{ end }}</legend>
+                <label for="name">Name</label>
+                <input id="name" name="name" type="text" value="{{ .Profile.Name }}" />
+                <label for="location">Default location</label>
+                <input id="location" name="location" type="text" value="{{ .Profile.Location }}" />
+                <label for="location">Get email if gamenight needs scheduling?</label>
+                <input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} />
+                    Get nag email
+                </label>
+                <br />
+                {{ if .User.Superuser }}
+                    <input type="hidden" id="pid" name="pid" value="{{ .Profile.id }}" />
+                    <label>
+                        <input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }} />
+                        Admin
+                    </label>
+                {{ end }}
+                <button type="submit" class="btn">Save</button>
+            </fieldset>
+        </div>
+        <div class="span6">
+            {{ if .User.Superuser }}
+                <legend>Users:</legend>
+                <ul>
+                    {{ range $u := .Users }}
+                        <li>{{ $u.Id }}: {{ $u.Name }}
+                            <button type="submit" class="close" id="edit" name="edit" value="{{ $u.Id }}">edit</button>
+                        </li>
+                    {{ end }}
+                </ul>
+            {{ end }}
+        </div>
+    </div>
+</form>
+{{ end }}
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}

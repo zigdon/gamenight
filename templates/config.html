@@ -1,24 +1,24 @@
-{% extends "base.html" %}
-{% set tab = 'admin' %}
-{% block title %}Edit Configuration{% endblock %}
-{% block content %}
+{{ template "base.html" }}
+{{ $tab := "admin" }}
+{{ define "Title" }}Edit Configuration{{ end }}
+{{ define "Content" }}
 <div class="row-fluid">
     <div class="span12">
         <form class="form-horizontal" method="post">
-            {% for name, val in config|dictsort %}
+            {{ range $name, $val := .Config }}
                 <div class="control-group">
-                    <label class="control-label" for="config_{{ name }}">{{ name }}
-                    {% if flags[name] %}
+                    <label class="control-label" for="config_{{ $name }}">{{ $name }}
+                    {{ if .Flags.name }}
                         <span class="label label-success">Updated</span>
-                    {% elif flags[name] == None %}
+                    {{ else if .Flags.name eq nil }}
                         <span class="label label-danger">Failed</span>
-                    {% endif %}</label>
+                    {{ end }}</label>
                     <div class="controls">
-                        <input type="text" id="config_{{ name }}"
-                               name="config_{{ name }}" value="{{ val }}"/>
+                        <input type="text" id="config_{{ $name }}"
+                               name="config_{{ $name }}" value="{{ $val }}"/>
                     </div>
                 </div>
-            {% endfor %}
+            {{ end }}
             <div class="control-group">
                 <label class="control-label" for="new_entry">Add a new key</label>
                 <div class="controls">
@@ -36,6 +36,6 @@
         </form>
     </div>
 </div>
-{% endblock %}
+{{ end }}
 {# vim: set ts=4 sts=4 sw=4 et: #}
 

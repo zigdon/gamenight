@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Is there a game night this week?</title>
+        <link type="text/css" rel="stylesheet" href="/resources/main.css" />
+        <meta property="og:title" content="Is there a game night this week?" />
+        {{ with .Current }}
+            {{ if .Status eq 1 }}
+            <meta property="og:description" content="Yes! {{ .Location }} - {{ .Date }}{{ if .Notes ne "" }} - {{ .Notes }}{{ end }}" />
+            {{ else }}
+                <meta property="og:description" content="{{ .Status }}" />
+            {{ end }}
+        {{ end }}
+    </head>
+    <body>
+        {{ with .Current }}
+            <div class="center">
+                <div class="answer">{{ .Status }}.</div>
+                {{ if .Status eq 1 }}
+                <div class="where">
+                    {{ .Where }}
+                    {{ .When }}
+                    {{ if .Notes ne "" }}<br />{{ .Notes }}{{ end }}
+                </div>
+                {{ end }}
+            </div>
+        {{ end }}
+
+        <div class="future">
+            <ul>
+                {{ if .Future }}
+                    Upcoming invitations:
+                    {{ range $day := .Future }}
+                        {{ if $day.Type eq "gamenight" }}
+                            <li class="scheduled">{{ $day.Date.strftime "%x" }}
+                              @ {{ $day.Location }}.</li>
+                        {{ else if $day.Type eq "invites" }}
+                            <li>{{ $day.Date.strftime "%x" }}:
+                                {{ $day.Invitations }}.
+                            </li>
+                        {{ else }}
+                            <li>{{ $day.Date.strftime "%x" }}:
+                                <span class="missing">None yet.</span></li>
+                        {{ end }}
+                    {{ end }}
+                {{ end }}
+            <li class="scheduled"><a href="/invite">Invite...</a></li>
+            </ul>
+        </div>
+
+        <div class="footer">Updated: {{ .Updated }}<br/>
+            Add to your calendar:
+            <a href="http://www.google.com/calendar/embed?src={{ .Calendar_url }}&ctz=America/Los_Angeles">Google Calendar</a>
+        </div>
+
+    </body>
+{ /* vim: set ts=4 sts=4 sw=4 et: */ }
+</html>

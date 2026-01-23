@@ -1,22 +1,8 @@
-runtime: python27
-api_version: 1
-threadsafe: true
+runtime: go122
 
 handlers:
 - url: /resources
   static_dir: resources
 
-- url: /tasks/.*
-  script: gamenight.cron
-  login: admin
-
 - url: /.*
-  script: gamenight.application
-
-libraries:
-- name: webapp2
-  version: latest
-- name: jinja2
-  version: latest
-- name: pycrypto
-  version: "2.6"
+  script: auto
