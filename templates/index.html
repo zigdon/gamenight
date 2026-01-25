@@ -5,8 +5,8 @@
         <link type="text/css" rel="stylesheet" href="/resources/main.css" />
         <meta property="og:title" content="Is there a game night this week?" />
         {{ with .Current }}
-            {{ if .Status eq 1 }}
-            <meta property="og:description" content="Yes! {{ .Location }} - {{ .Date }}{{ if .Notes ne "" }} - {{ .Notes }}{{ end }}" />
+            {{ if eq .Status "Yes" }}
+            <meta property="og:description" content="Yes! {{ .Location }} - {{ .When }}{{ if ne .Notes "" }} - {{ .Notes }}{{ end }}" />
             {{ else }}
                 <meta property="og:description" content="{{ .Status }}" />
             {{ end }}
@@ -16,11 +16,11 @@
         {{ with .Current }}
             <div class="center">
                 <div class="answer">{{ .Status }}.</div>
-                {{ if .Status eq 1 }}
+                {{ if eq .Status "Yes" }}
                 <div class="where">
-                    {{ .Where }}
+                    {{ .Location }}
                     {{ .When }}
-                    {{ if .Notes ne "" }}<br />{{ .Notes }}{{ end }}
+                    {{ if ne .Notes "" }}<br />{{ .Notes }}{{ end }}
                 </div>
                 {{ end }}
             </div>
@@ -31,15 +31,15 @@
                 {{ if .Future }}
                     Upcoming invitations:
                     {{ range $day := .Future }}
-                        {{ if $day.Type eq "gamenight" }}
-                            <li class="scheduled">{{ $day.Date.strftime "%x" }}
+                        {{ if eq $day.Type "gamenight" }}
+                            <li class="scheduled">{{ $day.When.Format "2006-01-02" }}
                               @ {{ $day.Location }}.</li>
-                        {{ else if $day.Type eq "invites" }}
-                            <li>{{ $day.Date.strftime "%x" }}:
-                                {{ $day.Invitations }}.
+                        {{ else if eq $day.Type "invite" }}
+                            <li>{{ $day.When.Format "2006-01-02" }}:
+                                {{ $day.Owner }} @ {{ $day.Location }}
                             </li>
                         {{ else }}
-                            <li>{{ $day.Date.strftime "%x" }}:
+                            <li>{{ $day.When.Format "2006-01-02" }}:
                                 <span class="missing">None yet.</span></li>
                         {{ end }}
                     {{ end }}
@@ -48,11 +48,11 @@
             </ul>
         </div>
 
-        <div class="footer">Updated: {{ .Updated }}<br/>
+        <div class="footer">Updated: {{ .Updated.Format "2006-01-02 3:04 PM" }}<br/>
             Add to your calendar:
-            <a href="http://www.google.com/calendar/embed?src={{ .Calendar_url }}&ctz=America/Los_Angeles">Google Calendar</a>
+            <a href="http://www.google.com/calendar/embed?src={{ .CalendarID }}&ctz=America/Los_Angeles">Google Calendar</a>
         </div>
 
     </body>
-{ /* vim: set ts=4 sts=4 sw=4 et: */ }
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}
 </html>
