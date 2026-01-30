@@ -1,7 +1,6 @@
 {{ template "base.html" }}
-{{ $tab := "invite" }}
-{{ define "title" }}Offer to host gamenight{{ end }}
-{{ define "content" }}
+{{ define "Title" }}Offer to host gamenight{{ end }}
+{{ define "Content" }}
 <form method="post">
     <div class="row-fluid">
         <div class="span6">
@@ -29,23 +28,27 @@
             </fieldset>
         </div>
         <div class="span6">
+            TODO fix invitations
             {{ if .Invitations }}
                 <legend>Current invitations</legend>
                 <ol>
                     {{ range $invite := .Invitations }}
                         <li>
-                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ $invite.key.id }}">x</button>
-                            {{ if .User.Superuser }}
+                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ $invite.Key.Name }}">x</button>
+                            {{ if $.User.Superuser }}
                                 {{ $invite.Owner.Name }} -
                             {{ end }}
-                            {{ $invite.Date }} @
-                            {{ $invite.Location }} ({{ $invite.Priority_text }}).
+                            {{ $invite.When }} @
+                            {{ $invite.Location }} ({{ $invite.PriorityText }}).
                             {{ if $invite.Notes }}
                                 <br /><small>{{ $invite.Notes }}</small>
                             {{ end }}
                         </li>
                     {{ end }}
                 </ol>
+            {{ else }}
+                 <legend>Current invitations</legend>
+                 <p>No invitations at this time.</p>
             {{ end }}
             <legend>What does this all mean?</legend>
             <p>We're trying to make it easier to schedule and know where

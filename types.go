@@ -60,7 +60,7 @@ func (g Gamenight) String() string {
 }
 
 type Invitation struct {
-	ID       int64          `datastore:"-" json:"id"`
+	Key      *datastore.Key `datastore:"-" json:"key"`
 	Date     time.Time      `datastore:"d" json:"date"`
 	Time     time.Time      `datastore:"t" json:"time"`
 	Owner    *datastore.Key `datastore:"o" json:"owner"`
@@ -71,6 +71,19 @@ type Invitation struct {
 
 func (i Invitation) When() time.Time {
 	return dateTime(i.Date, i.Time)
+}
+
+func (i Invitation) PriorityText() string {
+	switch i.Priority {
+	case PriorityCan:
+		return "Can"
+	case PriorityWant:
+		return "Want"
+	case PriorityInsist:
+		return "Insist"
+	default:
+		return ""
+	}
 }
 
 
