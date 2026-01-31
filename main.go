@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 	"net/url"
 
@@ -114,8 +115,6 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUser(ctx context.Context, email string) (*User, error) {
-	// Assuming the user's email is stored in the 'n' (Name) field in Datastore.
-	// The Python code used User.lookup(sys_user.email()), implying lookup by email.
 	uQ := datastore.NewQuery("User").FilterField("n", "=", email).Limit(1)
 	var users []*User
 	_, err := dsClient.GetAll(ctx, uQ, &users)
@@ -125,7 +124,11 @@ func getUser(ctx context.Context, email string) (*User, error) {
 	if len(users) == 0 {
 		return nil, nil // User not found
 	}
-	return users[0], nil
+	u := users[0]
+	if (u.ID == u.Name) {
+		u.Name = strings.Split(u.ID, "@")[0]
+	}
+	return u, nil
 }
 
 // New type for InviteData to include messages and form values for re-rendering
@@ -133,13 +136,13 @@ type InviteData struct {
 	Tab         string
 	User        *User
 	Invitations []Invitation
-	When        string // Submitted 'when' value
-	Where       string // Submitted 'where' value
-	Notes       string // Submitted 'notes' value
-	Priority    string // Submitted 'priority' value
+	When        string
+	Where       string
+	Notes       string
+	Priority    string
 	Error       string
 	Msg         string
-	ParsedTime  time.Time // Store the parsed time for display
+	ParsedTime  time.Time
 }
 
 
@@ -159,9 +162,8 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
         return
     }
     if user == nil {
-        // User not found in Datastore, might be a new user. Create a dummy for now.
-        // In a real app, you'd create the user here or redirect to a registration.
-        user = &User{ID: email, Name: email}
+        // User not found in Datastore, create a new one.
+        user = &User{ID: email, Name: strings.Split(email, "@")[0]}
     }
 
 	var invs []Invitation
@@ -236,19 +238,11 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 			"1/02 15:04",                  // 5: MM/DD HH:mm
 			"1/02 3pm",                    // 6: MM/DD HHpm
 			"1/02",                        // 7: MM/DD
-			// From here on it's really fuzzy (8+)
-			"Monday, 15:04",
-			"Monday, 3pm",
-			"Monday",
-			"Mon, 15:04",
-			"Mon, 3pm",
-			"Mon",
         }
-		matched := 0
-        for n, layout := range layouts {
+        for _, layout := range layouts {
             parsedTime, parseErr = time.Parse(layout, whenStr)
             if parseErr == nil {
-				matched = n
+				log.Printf("Parsed date %q as %q: %s", whenStr, layout, parsedTime)
                 break
             }
 			log.Printf("Failed to parse date %q as %q: %v", whenStr, layout, parseErr)
@@ -262,20 +256,13 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Parsed date: %s", parsedTime.Format("2006-01-02 15:04"))
-		now := time.Now()
-		if matched >= 8 {
-			delta := int(parsedTime.Weekday() - now.Weekday())
-			if (delta <= 0) {
-				delta += 7
-			}
-			parsedTime = parsedTime.AddDate(now.Year(), int(now.Month()), now.Day() + delta)
-		}
 
 		if parsedTime.Hour() == 0 {
 			parsedTime = parsedTime.Add(20*time.Hour)
 		}
 
 		// Default year is this year unless it's in the past
+		now := time.Now()
 		if parsedTime.Year() == 0 {
 			parsedTime = parsedTime.AddDate(now.Year(), 0, 0)
 			if (parsedTime.Before(now)) {
@@ -287,12 +274,13 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		// --- Datastore operations ---
         // Create an Invitation entity
         invite := Invitation{
-            Date:     parsedTime.UTC(), // Store date part in UTC
-            Time:     parsedTime.UTC(), // Store time part in UTC
-            Owner:    datastore.NameKey("User", user.Name, nil), // Corrected: using NameKey for string ID
+			Key: datastore.IncompleteKey("Invitation", nil),
+            Date:     parsedTime.UTC(),
+            Time:     parsedTime.UTC(),
+            Owner:    datastore.NameKey("User", user.Name, nil),
             Location: whereStr,
             Notes:    notesStr,
-            Priority: PriorityUndefined, // Initialize with undefined, then parse
+            Priority: PriorityUndefined,
         }
 
         // Parse Priority string to Priority enum
@@ -312,8 +300,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 
         // Save to Datastore
         log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
-        key := datastore.IncompleteKey("Invitation", nil)
-		nk, err := dsClient.Put(ctx, key, &invite)
+		nk, err := dsClient.Put(ctx, invite.Key, &invite)
         if err != nil {
             log.Printf("Error saving invitation to Datastore: %v", err) // Log the error
             data.Error = fmt.Sprintf("Error saving invitation: %v", err)
@@ -326,7 +313,16 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 			invite.Location, invite.Priority)
         
         data.ParsedTime = parsedTime // Store parsed time in data struct
-        data.Msg = fmt.Sprintf("Invitation created for %s!", parsedTime.Format("Monday, January 2nd"))
+		suf := "th"
+		if parsedTime.Day() == 1 {
+			suf = "st"
+		} else if parsedTime.Day() == 2 {
+			suf = "nd"
+		} else if parsedTime.Day() == 3 {
+			suf = "rd"
+		}
+        data.Msg = fmt.Sprintf("Invitation created for %s%s!",
+		    parsedTime.Format("Monday, January 2"), suf)
         // Redirect to clear form
         http.Redirect(w, r, "/invite?msg="+url.QueryEscape(data.Msg), http.StatusFound)
         return
@@ -336,7 +332,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
     if msg := r.URL.Query().Get("msg"); msg != "" {
         data.Msg = html.EscapeString(msg)
     }
-	log.Printf("%#v", data)
 	err = tmpl.ExecuteTemplate(w, "invite.html", data)
 	if err != nil {
 		log.Printf("Error executing invite.html: %v", err)
@@ -365,7 +360,11 @@ func config(ctx context.Context, id string) string {
 		log.Printf("config err: %v", err)
 		return ""
 	}
-	return cfgs[0].Value
+	if len(cfgs) > 0 {
+		return cfgs[0].Value
+	}
+	log.Printf("No config found for %v", id)
+	return ""
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -423,7 +422,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		Owner string
 	}
 
-	type IndexData struct { // Renamed from Data to avoid conflict, and adding Logout
+	type IndexData struct {
 		Current Gamenight
 		Future []Future
 		Updated time.Time

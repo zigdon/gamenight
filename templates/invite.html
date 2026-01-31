@@ -1,4 +1,4 @@
-{{ template "base.html" }}
+{{ template "base.html" . }}
 {{ define "Title" }}Offer to host gamenight{{ end }}
 {{ define "Content" }}
 <form method="post">
@@ -28,25 +28,25 @@
             </fieldset>
         </div>
         <div class="span6">
-            Length of Invitations: {{ len .Invitations }}
-            TODO fix invitations
             {{ if .Invitations }}
                 <legend>Current invitations</legend>
-                <ol>
+                <ul>
                     {{ range $invite := .Invitations }}
                         <li>
-                            <button type="submit" class="close" id="withdraw" name="withdraw" value="{{ $invite.Key.Name }}">x</button>
+                            <button type="submit" class="close" name="withdraw" value="{{ $invite.Key }}">x</button>
                             {{ if $.User.Superuser }}
                                 {{ $invite.Owner.Name }} -
+                            {{ else }}
+                                (someone) -
                             {{ end }}
-                            {{ $invite.When }} @
+                            {{ $invite.When.Format "2006-01-02 3:04pm" }} @
                             {{ $invite.Location }} ({{ $invite.PriorityText }}).
                             {{ if $invite.Notes }}
                                 <br /><small>{{ $invite.Notes }}</small>
                             {{ end }}
                         </li>
                     {{ end }}
-                </ol>
+                </ul>
             {{ else }}
                  <legend>Current invitations</legend>
                  <p>No invitations at this time.</p>

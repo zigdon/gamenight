@@ -19,9 +19,9 @@
                         <div class="nav-collapse collapse navbar-responsive-collapse">
                             <ul class="nav">
                                     <li><a href="/">Home</a></li>
-                                    <li {{ if .Tab eq "invite" }}class="active"{{ end }}>
+                                    <li {{ if eq .Tab "invite" }}class="active"{{ end }}>
                                         <a href="/invite">Invitations</a></li>
-                                    <li {{ if .Tab eq "schedule" }}class="active"{{ end }}>
+                                    <li {{ if eq .Tab "schedule" }}class="active"{{ end }}>
                                         <a href="/schedule">Schedule</a></li><br />
                                 </ul>
                                 <ul class="nav pull-right">
@@ -38,7 +38,7 @@
                                         </li>
                                     {{ end }}
                                     <li class="divider-vertical"></li>
-                                    <li class="dropdown{{ if .Tab eq "profile" }} active{{ end }}">
+                                    <li class="dropdown{{ if eq .Tab "profile" }} active{{ end }}">
                                          <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .User.Name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
                                             <li>
@@ -70,7 +70,7 @@
                 {{ .Msg }}
             </div>
         {{ end }}
-        {{ template "Content" }}
+        {{ block "Content" . }}Content not loaded!{{ end }}
     </div>
 </body>
 {{/* vim: set ts=4 sts=4 sw=4 et: */}}
