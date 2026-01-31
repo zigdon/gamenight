@@ -27,7 +27,7 @@ const (
 )
 
 type User struct {
-	ID              *datastore.Key `datastore:"-" json:"id"`
+	ID              *datastore.Key `datastore:"__key__" json:"id"`
 	DefaultLocation string `datastore:"l" json:"location"`
 	Superuser       bool   `datastore:"s" json:"superuser"`
 	Emails          bool   `datastore:"e" json:"emails"`
@@ -35,7 +35,7 @@ type User struct {
 }
 
 type Gamenight struct {
-	ID         int64          `datastore:"-" json:"id"`
+	ID         int64          `datastore:"__key__" json:"id"`
 	Invite     *datastore.Key `datastore:"a" json:"inviteId"`
 	EventID    string         `datastore:"e" json:"calendarId"`
 	Status     string         `datastore:"s" json:"status"`
@@ -60,7 +60,7 @@ func (g Gamenight) String() string {
 }
 
 type Invitation struct {
-	Key      *datastore.Key `datastore:"-" json:"key"`
+	Key      *datastore.Key `datastore:"__key__" json:"key"`
 	Date     time.Time      `datastore:"d" json:"date"`
 	Time     time.Time      `datastore:"t" json:"time"`
 	Owner    *datastore.Key `datastore:"o" json:"owner"`

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"net/url"
@@ -70,8 +71,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	fmt.Fprintf(w, "Invitations:\n")
 	for n, i := range invs {
-		i.Key = keys[n]
-		fmt.Fprintf(w, "%#v\n", i)
+		fmt.Fprintf(w, "%#v: %#v\n", keys[n],  i)
 	}
 
 	userQ := datastore.NewQuery("User")
@@ -84,8 +84,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "\nUsers:\n")
-	for n, i := range users {
-		i.ID = keys[n]
+	for _, i := range users {
 		fmt.Fprintf(w, "%#v\n", i)
 	}
 }
@@ -145,7 +144,6 @@ func getUser(ctx context.Context, email string) (*User, error) {
 
 		log.Printf("New user created: %v", nk)
 	}
-	user.ID = key
 	if strings.Contains(user.Name, "@") {
 		user.Name = strings.Split(user.Name, "@")[0]
 	}
@@ -242,7 +240,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	parsedTime, err := parseTimespec(whenStr)
 	if err != nil {
 		data.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
-		return fmt.Errorf("Form error: %v", data.Error)
+		return fmt.Errorf("failed to parse timespec: %v", err)
 	}
 
 	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04"))
@@ -269,16 +267,15 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		invite.Priority = PriorityInsist
 	default:
 		data.Error = "Invalid priority value."
-		return fmt.Errorf("Form error: %v", data.Error)
+		return fmt.Errorf("failed to parse priority: %v", priorityStr)
 	}
 
 	// Save to Datastore
 	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
 	nk, err := dsClient.Put(r.Context(), invite.Key, &invite)
 	if err != nil {
-		log.Printf("Error saving invitation to Datastore: %v", err)
-		data.Error = fmt.Sprintf("Error saving invitation: %v", err)
-		return fmt.Errorf("Form error: %v", data.Error)
+		data.Error = "Error saving invitation!"
+		return fmt.Errorf("failed to save invite: %v", err)
 	}
 
 	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
@@ -300,8 +297,31 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	return nil
 }
 
-func withdrawInvite(_ *http.Request, _ *InviteData, _ *User) error {
-	return fmt.Errorf("not implemented")
+func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
+	id, err := strconv.Atoi(r.FormValue("withdraw"))
+	if err != nil {
+		data.Error = "Invalid request"
+		return fmt.Errorf("invalid withdraw ID: %v", r.FormValue("withdraw"))
+	}
+	ctx := r.Context()
+	inv := &Invitation{}
+	key := datastore.IDKey("Invitation", int64(id), nil)
+	log.Printf("key: %#v", key)
+	err = dsClient.Get(ctx, key, inv)
+	if err != nil {
+		data.Error = "Invalid request"
+		return fmt.Errorf("failed to find invite %v: %v", key, err)
+	}
+	if !inv.Owner.Equal(user.ID) && !user.Superuser {
+		data.Error = "Invalid request"
+		return fmt.Errorf("%v not owner of %#v", user, inv)
+	}
+	if err := dsClient.Delete(ctx, key); err != nil {
+		data.Error = "Failed to withdraw invite"
+		return fmt.Errorf("error deleting invite %#v: %v", inv, err)
+	}
+	data.Msg = "Invitation withdrawn"
+	return nil
 }
 
 func handleInvite(w http.ResponseWriter, r *http.Request) {
@@ -325,7 +345,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	    FilterField("d", ">", time.Now()).
 		Order("d")
 
-	keys, err := dsClient.GetAll(ctx, invQ, &invs)
+	_, err = dsClient.GetAll(ctx, invQ, &invs)
 	if err != nil {
 		log.Printf("query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -333,7 +353,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for n, i := range invs {
-		invs[n].Key = keys[n]
 		invs[n].IsOwner = i.Owner.Equal(user.ID)
 	}
 
