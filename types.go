@@ -27,7 +27,7 @@ const (
 )
 
 type User struct {
-	ID              string `datastore:"-" json:"id"`
+	ID              *datastore.Key `datastore:"-" json:"id"`
 	DefaultLocation string `datastore:"l" json:"location"`
 	Superuser       bool   `datastore:"s" json:"superuser"`
 	Emails          bool   `datastore:"e" json:"emails"`
@@ -67,6 +67,7 @@ type Invitation struct {
 	Location string         `datastore:"l" json:"location"`
 	Notes    string         `datastore:"n" json:"notes"`
 	Priority Priority       `datastore:"p" json:"priority"`
+	IsOwner  bool           `datastore:"-" json:"_isowner"`
 }
 
 func (i Invitation) When() time.Time {

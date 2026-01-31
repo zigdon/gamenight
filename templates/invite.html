@@ -9,14 +9,14 @@
                  <label for="when">When</label>
                  <span class="help-block">Date and time.</span>
                  <input id="when" name="when" type="text" 
-                        placeholder="Saturday, 8pm; Oct 12, 7:30pm" value="{{ .When }}" />
+                        placeholder="10/20, 8pm; Oct 20, 7:30pm" value="{{ .When }}" />
                  <label for="where">Where</label>
                  <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
                  <input id="where" name="where" type="text" 
                         placeholder="My house" value="{{ .Where }}" />
                  <label for="notes">Notes</label>
                  <span class="help-block">Anything else you'd like to tell us.</span>
-                 <input id="notes" name="notes" type="text" />
+                 <input id="notes" name="notes" type="text" value="{{ .Notes }}" />
                  <span class="help-block">How important is it for you to host this time?</span>
                  <label for="priority">Priority</label>
                      <select name="priority" id="priority">
@@ -33,11 +33,11 @@
                 <ul>
                     {{ range $invite := .Invitations }}
                         <li>
-                            <button type="submit" class="close" name="withdraw" value="{{ $invite.Key }}">x</button>
+                            {{ if or $invite.IsOwner $.User.Superuser }}
+                              <button type="submit" class="close" name="withdraw" value="{{ $invite.Key.ID }}">x</button>
+                            {{ end }}
                             {{ if $.User.Superuser }}
                                 {{ $invite.Owner.Name }} -
-                            {{ else }}
-                                (someone) -
                             {{ end }}
                             {{ $invite.When.Format "2006-01-02 3:04pm" }} @
                             {{ $invite.Location }} ({{ $invite.PriorityText }}).

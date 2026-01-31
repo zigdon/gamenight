@@ -58,20 +58,34 @@ func main() {
 }
 
 func handleDebug(w http.ResponseWriter, r *http.Request) {
-	invQ := datastore.NewQuery("Invitation").
-	    FilterField("d", ">", time.Now()).
-		Order("d").
-		Limit(4)
+	invQ := datastore.NewQuery("Invitation").Order("d")
 
 	var invs []Invitation
-		_, err := dsClient.GetAll(r.Context(), invQ, &invs)
+	keys, err := dsClient.GetAll(r.Context(), invQ, &invs)
 	if err != nil {
-		log.Printf("query err: %v", err)
+		log.Printf("inv query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/plain")
-	for _, i := range invs {
+	fmt.Fprintf(w, "Invitations:\n")
+	for n, i := range invs {
+		i.Key = keys[n]
+		fmt.Fprintf(w, "%#v\n", i)
+	}
+
+	userQ := datastore.NewQuery("User")
+
+	var users []User
+	keys, err = dsClient.GetAll(r.Context(), userQ, &users)
+	if err != nil {
+		log.Printf("user query err: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Fprintf(w, "\nUsers:\n")
+	for n, i := range users {
+		i.ID = keys[n]
 		fmt.Fprintf(w, "%#v\n", i)
 	}
 }
@@ -95,12 +109,12 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, we'll just create a dummy user object.
-	// Later, we'll need to load the user from the datastore.
-	user := &User{
-		ID:   email,
-		Name: email,
-	}
+	user, err := getUser(r.Context(), email)
+    if err != nil {
+        log.Printf("Error fetching user %s: %v", email, err)
+        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+        return
+    }
 
 	data := &ProfileData{
 		User:    user,
@@ -108,27 +122,34 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		Tab:     "profile",
 	}
 
-	err := tmpl.ExecuteTemplate(w, "profile.html", data)
+	err = tmpl.ExecuteTemplate(w, "profile.html", data)
 	if err != nil {
 		log.Printf("Error executing profile.html: %v", err)
 	}
 }
 
 func getUser(ctx context.Context, email string) (*User, error) {
-	uQ := datastore.NewQuery("User").FilterField("n", "=", email).Limit(1)
-	var users []*User
-	_, err := dsClient.GetAll(ctx, uQ, &users)
+	user := &User{}
+	key := datastore.NameKey("User", email, nil)
+	err := dsClient.Get(ctx, key, user)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
+		user = &User{
+			ID:   key,
+			Name: strings.Split(email, "@")[0],
+		}
+		nk, err := dsClient.Put(ctx, user.ID, user)
+        if err != nil {
+            log.Printf("Error saving new user to Datastore: %v", err)
+            return nil, fmt.Errorf("Couldn't created user")
+        }
+
+		log.Printf("New user created: %v", nk)
 	}
-	if len(users) == 0 {
-		return nil, nil // User not found
+	user.ID = key
+	if strings.Contains(user.Name, "@") {
+		user.Name = strings.Split(user.Name, "@")[0]
 	}
-	u := users[0]
-	if (u.ID == u.Name) {
-		u.Name = strings.Split(u.ID, "@")[0]
-	}
-	return u, nil
+	return user, nil
 }
 
 // New type for InviteData to include messages and form values for re-rendering
@@ -161,21 +182,22 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Error fetching user", http.StatusInternalServerError)
         return
     }
-    if user == nil {
-        // User not found in Datastore, create a new one.
-        user = &User{ID: email, Name: strings.Split(email, "@")[0]}
-    }
 
 	var invs []Invitation
 	invQ := datastore.NewQuery("Invitation").
 	    FilterField("d", ">", time.Now()).
 		Order("d")
 
-	_, err = dsClient.GetAll(ctx, invQ, &invs)
+	keys, err := dsClient.GetAll(ctx, invQ, &invs)
 	if err != nil {
 		log.Printf("query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for n, i := range invs {
+		invs[n].Key = keys[n]
+		invs[n].IsOwner = i.Owner.Equal(user.ID)
 	}
 
 	data := &InviteData{
@@ -194,6 +216,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 
 		log.Printf("Form parsed")
+		log.Printf("%#v", r.Form)
 		whenStr := r.FormValue("when")
 		whereStr := r.FormValue("where")
 		notesStr := r.FormValue("notes")
@@ -235,9 +258,9 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 			"2006-01-02",                  // 2: YYYY-MM-DD
 			"Jan 2nd 15:04",               // 3: mmm DDnd HH:mm
 			"Jan 2nd",                     // 4: mmm DDnd
-			"1/02 15:04",                  // 5: MM/DD HH:mm
-			"1/02 3pm",                    // 6: MM/DD HHpm
-			"1/02",                        // 7: MM/DD
+			"1/2 15:04",                   // 5: MM/DD HH:mm
+			"1/2 3pm",                     // 6: MM/DD HHpm
+			"1/2",                         // 7: MM/DD
         }
         for _, layout := range layouts {
             parsedTime, parseErr = time.Parse(layout, whenStr)
@@ -277,7 +300,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 			Key: datastore.IncompleteKey("Invitation", nil),
             Date:     parsedTime.UTC(),
             Time:     parsedTime.UTC(),
-            Owner:    datastore.NameKey("User", user.Name, nil),
+            Owner:    user.ID,
             Location: whereStr,
             Notes:    notesStr,
             Priority: PriorityUndefined,
@@ -302,7 +325,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
         log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
 		nk, err := dsClient.Put(ctx, invite.Key, &invite)
         if err != nil {
-            log.Printf("Error saving invitation to Datastore: %v", err) // Log the error
+            log.Printf("Error saving invitation to Datastore: %v", err)
             data.Error = fmt.Sprintf("Error saving invitation: %v", err)
             tmpl.ExecuteTemplate(w, "invite.html", data)
             return
@@ -449,14 +472,18 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for _, inv := range invs {
-		if _, ok := found[fmt.Sprintf("%s@%s", inv.Owner.Name, inv.When())]; ok {
-			continue
+		name := "N/A"
+		if inv.Owner != nil {
+			if _, ok := found[fmt.Sprintf("%s@%s", inv.Owner.Name, inv.When())]; ok {
+				continue
+			}
+			name = inv.Owner.Name
 		}
 		days = append(days, Future{
 			Type: "invite",
 			When: inv.When(),
 			Location: inv.Location,
-			Owner: inv.Owner.Name,
+			Owner: name,
 		})
 	}
 
