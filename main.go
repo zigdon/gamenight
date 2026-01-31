@@ -166,6 +166,143 @@ type InviteData struct {
 	ParsedTime  time.Time
 }
 
+func parseTimespec(timespec string) (time.Time, error) {
+	var parsedTime time.Time
+	var err error
+	// Try to parse as specific layout first, then more general ones.
+	// Example: "Saturday, 8pm", "Oct 12, 7:30pm"
+	layouts := []string{
+		"2006-01-02 3pm",              // 0: YYYY-MM-DD HHpm
+		"2006-01-02 15:04",            // 1: YYYY-MM-DD HH:mm
+		"2006-01-02",                  // 2: YYYY-MM-DD
+		"Jan 2 15:04",                 // 3: mmm DD HH:mm
+		"Jan 2",                       // 4: mmm DD
+		"1/2 15:04",                   // 5: MM/DD HH:mm
+		"1/2 3pm",                     // 6: MM/DD HHpm
+		"1/2",                         // 7: MM/DD
+	}
+	found := false
+	for _, layout := range layouts {
+		parsedTime, err = time.Parse(layout, timespec)
+		if err == nil {
+			log.Printf("Parsed date %q as %q: %s", timespec, layout, parsedTime)
+			found = true
+			break
+		}
+		log.Printf("Failed to parse date %q as %q: %v", timespec, layout, err)
+	}
+
+	if !found {
+		return parsedTime, err
+	}
+
+	if parsedTime.Hour() == 0 {
+		parsedTime = parsedTime.Add(20*time.Hour)
+	}
+
+	// Default year is this year unless it's in the past
+	now := time.Now()
+	if parsedTime.Year() == 0 {
+		parsedTime = parsedTime.AddDate(now.Year(), 0, 0)
+		if (parsedTime.Before(now)) {
+			parsedTime = parsedTime.AddDate(1, 0, 0)
+		}
+	}
+	return parsedTime, err
+}
+
+func createInvite(r *http.Request, data *InviteData, user *User) error {
+	whenStr := r.FormValue("when")
+	whereStr := r.FormValue("where")
+	notesStr := r.FormValue("notes")
+	priorityStr := r.FormValue("priority")
+
+	data.When = whenStr
+	data.Where = whereStr
+	data.Notes = notesStr
+	data.Priority = priorityStr
+	log.Printf("parsed data: %v", data)
+
+	// Basic validation
+	if whenStr == "" {
+		data.Error = "When do you want to host?"
+	}
+	if whereStr == "" {
+		data.Error = "Where do you want to host?"
+	}
+	if priorityStr == "" {
+		data.Error = "Gotta have a priority."
+	}
+
+	if data.Error != "" {
+		return fmt.Errorf("Form error: %v", data.Error)
+	}
+	log.Printf("Passed validation")
+
+	parsedTime, err := parseTimespec(whenStr)
+	if err != nil {
+		data.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
+		return fmt.Errorf("Form error: %v", data.Error)
+	}
+
+	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04"))
+
+	// Create an Invitation entity
+	invite := Invitation{
+		Key: datastore.IncompleteKey("Invitation", nil),
+		Date:     parsedTime.UTC(),
+		Time:     parsedTime.UTC(),
+		Owner:    user.ID,
+		Location: whereStr,
+		Notes:    notesStr,
+		Priority: PriorityUndefined,
+	}
+
+	// Parse Priority string to Priority enum
+	log.Printf("Parsing priority")
+	switch priorityStr {
+	case "Can":
+		invite.Priority = PriorityCan
+	case "Want":
+		invite.Priority = PriorityWant
+	case "Insist":
+		invite.Priority = PriorityInsist
+	default:
+		data.Error = "Invalid priority value."
+		return fmt.Errorf("Form error: %v", data.Error)
+	}
+
+	// Save to Datastore
+	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
+	nk, err := dsClient.Put(r.Context(), invite.Key, &invite)
+	if err != nil {
+		log.Printf("Error saving invitation to Datastore: %v", err)
+		data.Error = fmt.Sprintf("Error saving invitation: %v", err)
+		return fmt.Errorf("Form error: %v", data.Error)
+	}
+
+	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
+		nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
+		invite.Location, invite.Priority)
+	
+	data.ParsedTime = parsedTime // Store parsed time in data struct
+	suf := "th"
+	if parsedTime.Day() == 1 {
+		suf = "st"
+	} else if parsedTime.Day() == 2 {
+		suf = "nd"
+	} else if parsedTime.Day() == 3 {
+		suf = "rd"
+	}
+	data.Msg = fmt.Sprintf("Invitation created for %s%s!",
+		parsedTime.Format("Monday, January 2"), suf)
+
+	return nil
+}
+
+func withdrawInvite(_ *http.Request, _ *InviteData, _ *User) error {
+	return fmt.Errorf("not implemented")
+}
 
 func handleInvite(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
@@ -217,135 +354,17 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Form parsed")
 		log.Printf("%#v", r.Form)
-		whenStr := r.FormValue("when")
-		whereStr := r.FormValue("where")
-		notesStr := r.FormValue("notes")
-		priorityStr := r.FormValue("priority")
-
-		data.When = whenStr
-		data.Where = whereStr
-		data.Notes = notesStr
-		data.Priority = priorityStr
-		log.Printf("parsed data: %v", data)
-
-		// Basic validation
-		if whenStr == "" {
-			data.Error = "When do you want to host?"
+		if (r.FormValue("withdraw") != "") {
+			err = withdrawInvite(r, data, user)
+		} else {
+			err = createInvite(r, data, user)
 		}
-		if whereStr == "" {
-			data.Error = "Where do you want to host?"
-		}
-		if priorityStr == "" {
-			data.Error = "Gotta have a priority."
-		}
-
-		if data.Error != "" {
-			log.Printf("Form error: %v", data.Error)
-			tmpl.ExecuteTemplate(w, "invite.html", data)
-			return
-		}
-		log.Printf("Passed validation")
-
-		// --- Date/Time Parsing (Placeholder, will be enhanced) ---
-		var parsedTime time.Time
-		var parseErr error
-        // Try to parse as specific layout first, then more general ones.
-        // Example: "Saturday, 8pm", "Oct 12, 7:30pm"
-        // For now, let's assume a simple layout. Need more robust parsing.
-        layouts := []string{
-			"2006-01-02 3pm",              // 0: YYYY-MM-DD HHpm
-			"2006-01-02 15:04",            // 1: YYYY-MM-DD HH:mm
-			"2006-01-02",                  // 2: YYYY-MM-DD
-			"Jan 2nd 15:04",               // 3: mmm DDnd HH:mm
-			"Jan 2nd",                     // 4: mmm DDnd
-			"1/2 15:04",                   // 5: MM/DD HH:mm
-			"1/2 3pm",                     // 6: MM/DD HHpm
-			"1/2",                         // 7: MM/DD
-        }
-        for _, layout := range layouts {
-            parsedTime, parseErr = time.Parse(layout, whenStr)
-            if parseErr == nil {
-				log.Printf("Parsed date %q as %q: %s", whenStr, layout, parsedTime)
-                break
-            }
-			log.Printf("Failed to parse date %q as %q: %v", whenStr, layout, parseErr)
-        }
-
-		if parseErr != nil {
-			log.Printf("Giving up on parsing %q", whenStr)
-			data.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
+		if err != nil {
+			log.Printf("Error processing POST: %v", err)
 			tmpl.ExecuteTemplate(w, "invite.html", data)
 			return
 		}
 
-		log.Printf("Parsed date: %s", parsedTime.Format("2006-01-02 15:04"))
-
-		if parsedTime.Hour() == 0 {
-			parsedTime = parsedTime.Add(20*time.Hour)
-		}
-
-		// Default year is this year unless it's in the past
-		now := time.Now()
-		if parsedTime.Year() == 0 {
-			parsedTime = parsedTime.AddDate(now.Year(), 0, 0)
-			if (parsedTime.Before(now)) {
-				parsedTime = parsedTime.AddDate(1, 0, 0)
-			}
-		}
-		log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04"))
-
-		// --- Datastore operations ---
-        // Create an Invitation entity
-        invite := Invitation{
-			Key: datastore.IncompleteKey("Invitation", nil),
-            Date:     parsedTime.UTC(),
-            Time:     parsedTime.UTC(),
-            Owner:    user.ID,
-            Location: whereStr,
-            Notes:    notesStr,
-            Priority: PriorityUndefined,
-        }
-
-        // Parse Priority string to Priority enum
-		log.Printf("Parsing priority")
-        switch priorityStr {
-        case "Can":
-            invite.Priority = PriorityCan
-        case "Want":
-            invite.Priority = PriorityWant
-        case "Insist":
-            invite.Priority = PriorityInsist
-        default:
-            data.Error = "Invalid priority value."
-            tmpl.ExecuteTemplate(w, "invite.html", data)
-            return
-        }
-
-        // Save to Datastore
-        log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
-		nk, err := dsClient.Put(ctx, invite.Key, &invite)
-        if err != nil {
-            log.Printf("Error saving invitation to Datastore: %v", err)
-            data.Error = fmt.Sprintf("Error saving invitation: %v", err)
-            tmpl.ExecuteTemplate(w, "invite.html", data)
-            return
-        }
-
-        log.Printf("Successfully invitation (%v): from %s for %s @ %s (Priority: %v)",
-            nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
-			invite.Location, invite.Priority)
-        
-        data.ParsedTime = parsedTime // Store parsed time in data struct
-		suf := "th"
-		if parsedTime.Day() == 1 {
-			suf = "st"
-		} else if parsedTime.Day() == 2 {
-			suf = "nd"
-		} else if parsedTime.Day() == 3 {
-			suf = "rd"
-		}
-        data.Msg = fmt.Sprintf("Invitation created for %s%s!",
-		    parsedTime.Format("Monday, January 2"), suf)
         // Redirect to clear form
         http.Redirect(w, r, "/invite?msg="+url.QueryEscape(data.Msg), http.StatusFound)
         return
