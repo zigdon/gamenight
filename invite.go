@@ -1,0 +1,218 @@
+package main
+
+import (
+	"fmt"
+	"html"
+	"log"
+	"net/http"
+	"strconv"
+	"net/url"
+	"time"
+
+	"cloud.google.com/go/datastore"
+)
+
+// New type for InviteData to include messages and form values for re-rendering
+type InviteData struct {
+	Tab         string
+	User        *User
+	Invitations []Invitation
+	When        string
+	Where       string
+	Notes       string
+	Priority    string
+	Error       string
+	Msg         string
+	ParsedTime  time.Time
+}
+
+func createInvite(r *http.Request, data *InviteData, user *User) error {
+	whenStr := r.FormValue("when")
+	whereStr := r.FormValue("where")
+	notesStr := r.FormValue("notes")
+	priorityStr := r.FormValue("priority")
+
+	data.When = whenStr
+	data.Where = whereStr
+	data.Notes = notesStr
+	data.Priority = priorityStr
+	log.Printf("parsed data: %v", data)
+
+	// Basic validation
+	if whenStr == "" {
+		data.Error = "When do you want to host?"
+	}
+	if whereStr == "" {
+		data.Error = "Where do you want to host?"
+	}
+	if priorityStr == "" {
+		data.Error = "Gotta have a priority."
+	}
+
+	if data.Error != "" {
+		return fmt.Errorf("Form error: %v", data.Error)
+	}
+	log.Printf("Passed validation")
+
+	parsedTime, err := parseTimespec(whenStr)
+	if err != nil {
+		data.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
+		return fmt.Errorf("failed to parse timespec: %v", err)
+	}
+
+	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04"))
+
+	// Create an Invitation entity
+	invite := Invitation{
+		Key: datastore.IncompleteKey("Invitation", nil),
+		Date:     parsedTime.UTC(),
+		Time:     parsedTime.UTC(),
+		Owner:    user.ID,
+		Location: whereStr,
+		Notes:    notesStr,
+		Priority: PriorityUndefined,
+	}
+
+	// Parse Priority string to Priority enum
+	log.Printf("Parsing priority")
+	switch priorityStr {
+	case "Can":
+		invite.Priority = PriorityCan
+	case "Want":
+		invite.Priority = PriorityWant
+	case "Insist":
+		invite.Priority = PriorityInsist
+	default:
+		data.Error = "Invalid priority value."
+		return fmt.Errorf("failed to parse priority: %v", priorityStr)
+	}
+
+	// Save to Datastore
+	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
+	nk, err := dsClient.Put(r.Context(), invite.Key, &invite)
+	if err != nil {
+		data.Error = "Error saving invitation!"
+		return fmt.Errorf("failed to save invite: %v", err)
+	}
+
+	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
+		nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
+		invite.Location, invite.Priority)
+	
+	data.ParsedTime = parsedTime // Store parsed time in data struct
+	suf := "th"
+	if parsedTime.Day() == 1 {
+		suf = "st"
+	} else if parsedTime.Day() == 2 {
+		suf = "nd"
+	} else if parsedTime.Day() == 3 {
+		suf = "rd"
+	}
+	data.Msg = fmt.Sprintf("Invitation created for %s%s!",
+		parsedTime.Format("Monday, January 2"), suf)
+
+	return nil
+}
+
+func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
+	id, err := strconv.Atoi(r.FormValue("withdraw"))
+	if err != nil {
+		data.Error = "Invalid request"
+		return fmt.Errorf("invalid withdraw ID: %v", r.FormValue("withdraw"))
+	}
+	ctx := r.Context()
+	inv := &Invitation{}
+	key := datastore.IDKey("Invitation", int64(id), nil)
+	log.Printf("key: %#v", key)
+	err = dsClient.Get(ctx, key, inv)
+	if err != nil {
+		data.Error = "Invalid request"
+		return fmt.Errorf("failed to find invite %v: %v", key, err)
+	}
+	if !inv.Owner.Equal(user.ID) && !user.Superuser {
+		data.Error = "Invalid request"
+		return fmt.Errorf("%v not owner of %#v", user, inv)
+	}
+	if err := dsClient.Delete(ctx, key); err != nil {
+		data.Error = "Failed to withdraw invite"
+		return fmt.Errorf("error deleting invite %#v: %v", inv, err)
+	}
+	data.Msg = "Invitation withdrawn"
+	return nil
+}
+
+func handleInvite(w http.ResponseWriter, r *http.Request) {
+    ctx := r.Context()
+	email := r.Header.Get("X-Appengine-User-Email")
+	if email == "" {
+		http.Redirect(w, r, "/_ah/login?continue=/invite", http.StatusFound)
+		return
+	}
+
+    // Attempt to get the user from datastore
+    user, err := getUser(ctx, email)
+    if err != nil {
+        log.Printf("Error fetching user %s: %v", email, err)
+        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+        return
+    }
+
+	var invs []Invitation
+	invQ := datastore.NewQuery("Invitation").
+	    FilterField("d", ">", time.Now()).
+		Order("d")
+
+	_, err = dsClient.GetAll(ctx, invQ, &invs)
+	if err != nil {
+		log.Printf("query err: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for n, i := range invs {
+		invs[n].IsOwner = i.Owner.Equal(user.ID)
+	}
+
+	data := &InviteData{
+		Tab:  "invite",
+		User: user,
+		Invitations: invs,
+	}
+
+	if r.Method == http.MethodPost {
+		log.Printf("Handling POST")
+		// Parse form data
+		if err := r.ParseForm(); err != nil {
+			data.Error = fmt.Sprintf("Error parsing form: %v", err)
+			tmpl.ExecuteTemplate(w, "invite.html", data)
+			return
+		}
+
+		log.Printf("Form parsed")
+		log.Printf("%#v", r.Form)
+		if (r.FormValue("withdraw") != "") {
+			err = withdrawInvite(r, data, user)
+		} else {
+			err = createInvite(r, data, user)
+		}
+		if err != nil {
+			log.Printf("Error processing POST: %v", err)
+			tmpl.ExecuteTemplate(w, "invite.html", data)
+			return
+		}
+
+        // Redirect to clear form
+        http.Redirect(w, r, "/invite?msg="+url.QueryEscape(data.Msg), http.StatusFound)
+        return
+	}
+
+    // Check for message in URL query parameters (after redirect)
+    if msg := r.URL.Query().Get("msg"); msg != "" {
+        data.Msg = html.EscapeString(msg)
+    }
+	err = tmpl.ExecuteTemplate(w, "invite.html", data)
+	if err != nil {
+		log.Printf("Error executing invite.html: %v", err)
+	}
+}
+
