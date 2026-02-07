@@ -1,0 +1,170 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"net/url"
+)
+type ProfileData struct {
+	User    *User
+	Profile *User
+	Users   []User
+	Tab     string
+	Msg 	string
+	Error   string
+}
+
+func updateProfile(r *http.Request, data *ProfileData, user *User) error {
+	ctx := r.Context()
+	form := r.Form
+	var id string
+	if user.Superuser && len(form["pid"]) > 0 {
+		id = form["pid"][0]
+	} else {
+		id = user.ID.Name
+	}
+
+	if user.ID.Name != id && !user.Superuser {
+		return fmt.Errorf("User %v can't edit %v", user, id)
+	}
+
+	profile, err := getUser(ctx, id)
+	if err != nil {
+		return fmt.Errorf("Can't find user %v: %v", id, err)
+	}
+
+	// Make sure the form is filled out
+	for _, f := range []string{"name", "location"} {
+		if len(form[f]) == 0 {
+			return fmt.Errorf("Missing form field %s", f)
+		}
+	}
+
+	var changes []string
+	if profile.Name != form["name"][0] {
+
+		changes = append(changes,
+			fmt.Sprintf("%s: %q -> %q", "Name", profile.Name, form["name"][0]))
+		profile.Name = form["name"][0]
+	}
+	if profile.DefaultLocation != form["location"][0] {
+
+		changes = append(changes,
+			fmt.Sprintf("%s: %q -> %q", "Location", profile.DefaultLocation, form["location"][0]))
+		profile.DefaultLocation = form["location"][0]
+	}
+	if profile.Emails != (len(form["nag"]) > 0) {
+		changes = append(changes,
+			fmt.Sprintf("%s: %v -> %v", "Nag", profile.Emails, !profile.Emails))
+		profile.Emails = len(form["nag"]) > 0
+	}
+	if profile.Notify != (len(form["notify"]) > 0) {
+		changes = append(changes,
+			fmt.Sprintf("%s: %v -> %v", "Notify", profile.Notify, !profile.Notify))
+		profile.Notify = len(form["notify"]) > 0
+	}
+	if profile.Superuser != (len(form["admin"]) > 0) {
+		changes = append(changes,
+			fmt.Sprintf("%s: %v -> %v", "Admin", profile.Superuser, !profile.Superuser))
+		profile.Superuser = len(form["admin"]) > 0
+	}
+
+	if len(changes) > 0 {
+		log.Print("Changes:\n")
+		for _, c := range changes {
+			log.Print(c)
+		}
+
+		nk, err := dsClient.Put(ctx, profile.ID, profile)
+		if err != nil {
+			return fmt.Errorf("Error updating user: %v", err)
+		}
+		log.Printf("Update database for %v", nk)
+
+		data.Msg = "Profile updated"
+	}
+	
+	return nil
+}
+
+func handleProfile(w http.ResponseWriter, r *http.Request) {
+	email := r.Header.Get("X-Appengine-User-Email")
+	if email == "" {
+		http.Redirect(w, r, "/_ah/login?continue=/profile", http.StatusFound)
+		return
+	}
+
+	user, err := getUser(r.Context(), email)
+    if err != nil {
+        log.Printf("Error fetching user %s: %v", email, err)
+        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+        return
+    }
+
+	data := &ProfileData{
+		User:    user,
+		Profile: user,
+		Tab:     "profile",
+	}
+
+	if r.Method == http.MethodPost {
+		log.Printf("Handling POST")
+		// Parse form data
+		if err := r.ParseForm(); err != nil {
+			data.Error = fmt.Sprintf("Error parsing form: %v", err)
+			tmpl.ExecuteTemplate(w, "invite.html", data)
+			return
+		}
+
+		log.Printf("Form parsed")
+		log.Printf("%#v", r.Form)
+		err = updateProfile(r, data, user)
+		if err != nil {
+			if data.Error == "" {
+				data.Error = "Internal error"
+			}
+			log.Printf("Error processing POST: %v", err)
+			tmpl.ExecuteTemplate(w, "profile.html", data)
+			return
+		}
+
+        // Redirect to clear form
+		if user.Superuser {
+			var pid = user.ID.Name
+			if r.FormValue("edit") != "" {
+				pid = r.FormValue("edit")
+			}
+			http.Redirect(w, r,
+			  fmt.Sprintf("/profile?edit=%s&msg=%s", url.QueryEscape(pid), url.QueryEscape(data.Msg)), http.StatusFound)
+		} else {
+			http.Redirect(w, r, "/profile?msg="+url.QueryEscape(data.Msg), http.StatusFound)
+		}
+        return
+	}
+	data.Msg = r.FormValue("msg")
+
+	if user.Superuser {
+		pid := r.FormValue("edit")
+		if pid != "" {
+			profile, err := getUser(r.Context(), pid)
+			if err != nil {
+				log.Printf("Error loading user %q: %v", pid, err)
+				data.Error = "Can't load user"
+			}
+			data.Profile = profile
+		}
+		users, err := getAllUsers(r.Context())
+		if err != nil {
+			log.Print(err)
+			data.Error = "Error querying users"
+		}
+		data.Users = users
+	}
+
+	err = tmpl.ExecuteTemplate(w, "profile.html", data)
+	if err != nil {
+		log.Printf("Error executing profile.html: %v", err)
+	}
+}
+
