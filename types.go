@@ -26,17 +26,25 @@ const (
 	PriorityInsist                    // 3
 )
 
+type BaseTemplate struct {
+	Tab string
+	Error string
+	Msg string
+	User *User
+}
+
 type User struct {
 	ID              *datastore.Key `datastore:"__key__" json:"id"`
-	DefaultLocation string `datastore:"l" json:"location"`
-	Superuser       bool   `datastore:"s" json:"superuser"`
-	Emails          bool   `datastore:"e" json:"emails"`
-	Notify          bool   `datastore:"f" json:"emails"`
-	Name            string `datastore:"n" json:"name"`
+	DefaultLocation string         `datastore:"l" json:"location"`
+	Superuser       bool           `datastore:"s" json:"superuser"`
+	Emails          bool           `datastore:"e" json:"remind"`
+	Notify          bool           `datastore:"f" json:"emails"`
+	Name            string         `datastore:"n" json:"name"`
+	Color           string         `datastore:"c" json:"color"`
 }
 
 type Gamenight struct {
-	ID         int64          `datastore:"__key__" json:"id"`
+	ID         *datastore.Key `datastore:"__key__" json:"id"`
 	Invite     *datastore.Key `datastore:"a" json:"inviteId"`
 	EventID    string         `datastore:"e" json:"calendarId"`
 	Status     string         `datastore:"s" json:"status"`

@@ -4,7 +4,7 @@
     <div>
         <form method="post">
             <fieldset>
-                <legend>Profile{{ if .User.Superuser }}: {{ .Profile.ID.Name }}{{ end }}</legend>
+                <legend>Profile{{ if .Base.User.Superuser }}: {{ .Profile.ID.Name }}{{ end }}</legend>
                 <table>
                     <tr><th>Email"</th><td>{{ .Profile.ID.Name }}</td></tr>
                     <tr><th><label for="name">Name</label></th>
@@ -15,7 +15,7 @@
                         <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} /></td></tr>
                         <tr><th><label for="notify">Get an email when a gamenight is scheduled?</label></th>
                             <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} /></td></tr>
-                {{ if .User.Superuser }}
+                {{ if .Base.User.Superuser }}
                     <tr><th>
                         <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />
                         <label for="admin">Admin</label></th>
@@ -27,7 +27,7 @@
         </form>
     </div>
     <div class="span6">
-        {{ if and .User.Superuser .Users }}
+        {{ if and .Base.User.Superuser .Users }}
             <form method="get">
                 <legend>Users:</legend>
                 <table width="100%">
@@ -42,8 +42,8 @@
                     <tr><td>{{ $u.ID.Name }}</td>
                         <td>{{ $u.Name }}</td>
                         <td>{{ $u.DefaultLocation }}</td>
-                        <td>{{ if $u.Emails }}Enabled{{ else }}Disabled{{ end }}</td>
-                        <td>{{ if $u.Notify }}Enabled{{ else }}Disabled{{ end }}</td>
+                        <td>{{ if $u.Emails }}✅{{ else }}❌{{ end }}</td>
+                        <td>{{ if $u.Notify }}✅{{ else }}❌{{ end }}</td>
                         <td><button type="submit" class="close" id="edit" name="edit" value="{{ $u.ID.Name }}">edit</button></td>
                         </tr>
                     {{ end }}

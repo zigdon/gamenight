@@ -8,12 +8,9 @@ import (
 	"net/url"
 )
 type ProfileData struct {
-	User    *User
+	Base    BaseTemplate
 	Profile *User
 	Users   []User
-	Tab     string
-	Msg 	string
-	Error   string
 }
 
 func updateProfile(r *http.Request, data *ProfileData, user *User) error {
@@ -83,7 +80,7 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 		}
 		log.Printf("Update database for %v", nk)
 
-		data.Msg = "Profile updated"
+		data.Base.Msg = "Profile updated"
 	}
 	
 	return nil
@@ -104,9 +101,8 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
     }
 
 	data := &ProfileData{
-		User:    user,
 		Profile: user,
-		Tab:     "profile",
+		Base: BaseTemplate{Tab: "profile", User: user},
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
@@ -114,7 +110,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Handling POST")
 		// Parse form data
 		if err := r.ParseForm(); err != nil {
-			data.Error = fmt.Sprintf("Error parsing form: %v", err)
+			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
 			tmpl.ExecuteTemplate(w, "invite.html", data)
 			return
 		}
@@ -123,8 +119,8 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%#v", r.Form)
 		err = updateProfile(r, data, user)
 		if err != nil {
-			if data.Error == "" {
-				data.Error = "Internal error"
+			if data.Base.Error == "" {
+				data.Base.Error = "Internal error"
 			}
 			log.Printf("Error processing POST: %v", err)
 			tmpl.ExecuteTemplate(w, "profile.html", data)
@@ -138,13 +134,13 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 				pid = r.FormValue("edit")
 			}
 			http.Redirect(w, r,
-			  fmt.Sprintf("/profile?edit=%s&msg=%s", url.QueryEscape(pid), url.QueryEscape(data.Msg)), http.StatusFound)
+			  fmt.Sprintf("/profile?edit=%s&msg=%s", url.QueryEscape(pid), url.QueryEscape(data.Base.Msg)), http.StatusFound)
 		} else {
-			http.Redirect(w, r, "/profile?msg="+url.QueryEscape(data.Msg), http.StatusFound)
+			http.Redirect(w, r, "/profile?msg="+url.QueryEscape(data.Base.Msg), http.StatusFound)
 		}
         return
 	}
-	data.Msg = r.FormValue("msg")
+	data.Base.Msg = r.FormValue("msg")
 
 	if user.Superuser {
 		pid := r.FormValue("edit")
@@ -152,14 +148,14 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 			profile, err := getUser(r.Context(), pid)
 			if err != nil {
 				log.Printf("Error loading user %q: %v", pid, err)
-				data.Error = "Can't load user"
+				data.Base.Error = "Can't load user"
 			}
 			data.Profile = profile
 		}
 		users, err := getAllUsers(r.Context())
 		if err != nil {
 			log.Print(err)
-			data.Error = "Error querying users"
+			data.Base.Error = "Error querying users"
 		}
 		data.Users = users
 	}

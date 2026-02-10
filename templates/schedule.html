@@ -1,7 +1,5 @@
-{{ template "base.html" }}
-{{ $tab := "schedule" }}
-{{ define "title" }}Upcoming gamenight{{ end }}
-{{ define "content" }}
+{{ define "Title" }}Upcoming gamenights{{ end }}
+{{ define "Content" }}
 <div class="row-fluid">
     <div class="span12">
         {{ range $day := .Days }}
@@ -32,4 +30,5 @@
     </div>
 </div>
 {{ end }}
+{{ template "base.html" . }}
 {{/* vim: set ts=4 sts=4 sw=4 et: */}}

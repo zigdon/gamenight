@@ -16,15 +16,12 @@ import (
 
 // New type for InviteData to include messages and form values for re-rendering
 type InviteData struct {
-	Tab         string
-	User        *User
+	Base        BaseTemplate
 	Invitations []Invitation
 	When        string
 	Where       string
 	Notes       string
 	Priority    string
-	Error       string
-	Msg         string
 	Checks      map[string]string
 	ParsedTime  time.Time
 }
@@ -43,23 +40,23 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 
 	// Basic validation
 	if whenStr == "" {
-		data.Error = "When do you want to host?"
+		data.Base.Error = "When do you want to host?"
 	}
 	if whereStr == "" {
-		data.Error = "Where do you want to host?"
+		data.Base.Error = "Where do you want to host?"
 	}
 	if priorityStr == "" {
-		data.Error = "Gotta have a priority."
+		data.Base.Error = "Gotta have a priority."
 	}
 
-	if data.Error != "" {
-		return fmt.Errorf("Form error: %v", data.Error)
+	if data.Base.Error != "" {
+		return fmt.Errorf("Form error: %v", data.Base.Error)
 	}
 	log.Printf("Passed validation")
 
 	parsedTime, err := parseTimespec(whenStr)
 	if err != nil {
-		data.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
+		data.Base.Error = fmt.Sprintf("Not sure what you mean by \"%s\"", whenStr)
 		return fmt.Errorf("failed to parse timespec: %v", err)
 	}
 
@@ -86,7 +83,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	case "Insist":
 		invite.Priority = PriorityInsist
 	default:
-		data.Error = "Invalid priority value."
+		data.Base.Error = "Invalid priority value."
 		return fmt.Errorf("failed to parse priority: %v", priorityStr)
 	}
 
@@ -94,7 +91,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
 	nk, err := dsClient.Put(r.Context(), invite.Key, &invite)
 	if err != nil {
-		data.Error = "Error saving invitation!"
+		data.Base.Error = "Error saving invitation!"
 		return fmt.Errorf("failed to save invite: %v", err)
 	}
 
@@ -113,7 +110,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 
 	if parsedTime.Before(time.Now()) {
-		data.Error = "Can't create an invitation in the past!"
+		data.Base.Error = "Can't create an invitation in the past!"
 		return fmt.Errorf("refused to create invitation in the past: %s", parsedTime)
 	}
 	// Attempt to warn about odd invitations.
@@ -129,7 +126,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		checks["f"] = fmt.Sprintf("%.0f days in the future", time.Until(parsedTime).Round(24*time.Hour).Hours()/24)
 	}
 	data.Checks = checks
-	data.Msg = fmt.Sprintf("Invitation created for %s%s!",
+	data.Base.Msg = fmt.Sprintf("Invitation created for %s%s!",
 		parsedTime.Format("Monday, January 2"), suf)
 
 	return nil
@@ -138,7 +135,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 	id, err := strconv.Atoi(r.FormValue("withdraw"))
 	if err != nil {
-		data.Error = "Invalid request"
+		data.Base.Error = "Invalid request"
 		return fmt.Errorf("invalid withdraw ID: %v", r.FormValue("withdraw"))
 	}
 	ctx := r.Context()
@@ -147,18 +144,18 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 	log.Printf("key: %#v", key)
 	err = dsClient.Get(ctx, key, inv)
 	if err != nil {
-		data.Error = "Invalid request"
+		data.Base.Error = "Invalid request"
 		return fmt.Errorf("failed to find invite %v: %v", key, err)
 	}
 	if !inv.Owner.Equal(user.ID) && !user.Superuser {
-		data.Error = "Invalid request"
+		data.Base.Error = "Invalid request"
 		return fmt.Errorf("%v not owner of %#v", user, inv)
 	}
 	if err := dsClient.Delete(ctx, key); err != nil {
-		data.Error = "Failed to withdraw invite"
+		data.Base.Error = "Failed to withdraw invite"
 		return fmt.Errorf("error deleting invite %#v: %v", inv, err)
 	}
-	data.Msg = "Invitation withdrawn"
+	data.Base.Msg = "Invitation withdrawn"
 	return nil
 }
 
@@ -195,8 +192,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &InviteData{
-		Tab:  "invite",
-		User: user,
+		Base: BaseTemplate{Tab: "invite", User: user},
 		Invitations: invs,
 		Checks: make(map[string]string),
 	}
@@ -218,7 +214,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Handling POST")
 		// Parse form data
 		if err := r.ParseForm(); err != nil {
-			data.Error = fmt.Sprintf("Error parsing form: %v", err)
+			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
 			tmpl.ExecuteTemplate(w, "invite.html", data)
 			return
 		}
@@ -237,7 +233,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 
         // Redirect to clear form
-		params := []string{"/invite?msg="+url.QueryEscape(data.Msg)}
+		params := []string{"/invite?msg="+url.QueryEscape(data.Base.Msg)}
 		for k, v := range data.Checks {
 			params = append(params, k+"="+url.QueryEscape(v))
 		}
@@ -247,7 +243,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 
     // Check for message in URL query parameters (after redirect)
     if msg := r.URL.Query().Get("msg"); msg != "" {
-        data.Msg = html.EscapeString(msg)
+        data.Base.Msg = html.EscapeString(msg)
     }
 	err = tmpl.ExecuteTemplate(w, "invite.html", data)
 	if err != nil {

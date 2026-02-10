@@ -19,13 +19,13 @@
                         <div class="nav-collapse collapse navbar-responsive-collapse">
                             <ul class="nav">
                                     <li><a href="/">Home</a></li>
-                                    <li {{ if eq .Tab "invite" }}class="active"{{ end }}>
+                                    <li {{ if eq .Base.Tab "invite" }}class="active"{{ end }}>
                                         <a href="/invite">Invitations</a></li>
-                                    <li {{ if eq .Tab "schedule" }}class="active"{{ end }}>
+                                    <li {{ if eq .Base.Tab "schedule" }}class="active"{{ end }}>
                                         <a href="/schedule">Schedule</a></li><br />
                                 </ul>
                                 <ul class="nav pull-right">
-                                    {{ if .User.Superuser }}
+                                    {{ if .Base.User.Superuser }}
                                         <li class="dropdown">
                                              <a data-toggle="dropdown" class="dropdown-toggle" href="#">Admin<strong class="caret"></strong></a>
                                             <ul class="dropdown-menu">
@@ -38,11 +38,11 @@
                                         </li>
                                     {{ end }}
                                     <li class="divider-vertical"></li>
-                                    <li class="dropdown{{ if eq .Tab "profile" }} active{{ end }}">
-                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .User.Name }}<strong class="caret"></strong></a>
+                                    <li class="dropdown{{ if eq .Base.Tab "profile" }} active{{ end }}">
+                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .Base.User.Name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
                                             <li>
-                                                <a href="/profile">Profile{{ if .User.Superuser }} and users{{ end }}</a>
+                                                <a href="/profile">Profile{{ if .Base.User.Superuser }} and users{{ end }}</a>
                                             </li>
                                             <li>
                                                 <a href="/logout">Log out</a>
@@ -56,18 +56,18 @@
                 </div>
             </div>
         </div>
-        {{ if .Error }}
+        {{ if .Base.Error }}
             <div class="alert">
                 <button type="button" class="close" data-dismiss="alert">×</button>
                 <h4>Message</h4>
-                {{ .Error }}
+                {{ .Base.Error }}
             </div>
         {{ end }}
-        {{ if .Msg }}
+        {{ if .Base.Msg }}
             <div class="alert-info">
                 <button type="button" class="close" data-dismiss="alert">×</button>
                 <h4>Message</h4>
-                {{ .Msg }}
+                {{ .Base.Msg }}
             </div>
         {{ end }}
         {{ block "Content" . }}Content not loaded!{{ end }}
