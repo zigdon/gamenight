@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"html"
+	"html/template"
 	"log"
 	"net/http"
 	"strconv"
 	"net/url"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
@@ -23,6 +25,7 @@ type InviteData struct {
 	Priority    string
 	Error       string
 	Msg         string
+	Checks      map[string]string
 	ParsedTime  time.Time
 }
 
@@ -108,6 +111,24 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	} else if parsedTime.Day() == 3 {
 		suf = "rd"
 	}
+
+	if parsedTime.Before(time.Now()) {
+		data.Error = "Can't create an invitation in the past!"
+		return fmt.Errorf("refused to create invitation in the past: %s", parsedTime)
+	}
+	// Attempt to warn about odd invitations.
+	// Expected: start 5pm-10pm, Saturday, in the future, within 30 days.
+	checks := make(map[string]string)
+	if parsedTime.Weekday() != 6 {  // Not saturday
+		checks["wd"] = fmt.Sprintf("for %s, not Saturday", parsedTime.Weekday().String())
+	}
+	if parsedTime.Hour() < 17 || parsedTime.Hour() >= 22 {
+		checks["hr"] = fmt.Sprintf("starting at %s", parsedTime.Format("3pm"))
+	}
+	if time.Until(parsedTime) > 30*24*time.Hour {
+		checks["f"] = fmt.Sprintf("%.0f days in the future", time.Until(parsedTime).Round(24*time.Hour).Hours()/24)
+	}
+	data.Checks = checks
 	data.Msg = fmt.Sprintf("Invitation created for %s%s!",
 		parsedTime.Format("Monday, January 2"), suf)
 
@@ -177,8 +198,22 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		Tab:  "invite",
 		User: user,
 		Invitations: invs,
+		Checks: make(map[string]string),
 	}
 
+	// Parse any warnings from the query
+	// wd - weekday
+	// hr - hour
+	// f - future
+	for _, k := range []string{"wd", "hr", "f"} {
+		v := r.FormValue(k)
+		if v == "" {
+			continue
+		}
+		data.Checks[k] = v
+	}
+
+	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/invite.html"))
 	if r.Method == http.MethodPost {
 		log.Printf("Handling POST")
 		// Parse form data
@@ -202,7 +237,11 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 
         // Redirect to clear form
-        http.Redirect(w, r, "/invite?msg="+url.QueryEscape(data.Msg), http.StatusFound)
+		params := []string{"/invite?msg="+url.QueryEscape(data.Msg)}
+		for k, v := range data.Checks {
+			params = append(params, k+"="+url.QueryEscape(v))
+		}
+        http.Redirect(w, r, strings.Join(params, "&"), http.StatusFound)
         return
 	}
 

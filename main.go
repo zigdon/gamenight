@@ -14,7 +14,6 @@ import (
 
 var (
 	dsClient *datastore.Client
-	tmpl     = template.Must(template.ParseGlob("templates/*.html"))
 )
 
 func main() {
@@ -39,7 +38,7 @@ func main() {
 	http.HandleFunc("/invite", handleInvite)
 	http.HandleFunc("/profile", handleProfile)
 	http.HandleFunc("/debug", handleDebug)
-	//http.HandleFunc("/schedule", nil)
+	http.HandleFunc("/schedule", handleSchedule)
 	//http.HandleFunc("/tasks/nag", nil)
 	//http.HandleFunc("/tasks/reset", nil)
 	//http.HandleFunc("/tasks/schedule", nil)
@@ -207,6 +206,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		Updated: time.Now(),
 		CalendarID: config(ctx, "calendar_id"),
 	}
+	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/index.html"))
 	err = tmpl.ExecuteTemplate(w, "index.html", data)
 	if err != nil {
 		log.Printf("Error executing index: %v", err)

@@ -31,6 +31,7 @@ type User struct {
 	DefaultLocation string `datastore:"l" json:"location"`
 	Superuser       bool   `datastore:"s" json:"superuser"`
 	Emails          bool   `datastore:"e" json:"emails"`
+	Notify          bool   `datastore:"f" json:"emails"`
 	Name            string `datastore:"n" json:"name"`
 }
 

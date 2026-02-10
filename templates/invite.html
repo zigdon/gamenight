@@ -1,6 +1,15 @@
-{{ template "base.html" . }}
 {{ define "Title" }}Offer to host gamenight{{ end }}
 {{ define "Content" }}
+{{ if .Checks }}
+<div class="container-fluid alert-info">
+    Just checking, your invitation is ...<ul>
+        {{ range $k, $v := .Checks -}}
+            <li> ... for {{ $v }}</li>
+        {{- end }}
+    </ul>
+    Is that right?
+</div>
+{{ end }}
 <form method="post" action="/invite">
     <div class="row-fluid">
         <div class="span6">
@@ -73,4 +82,5 @@
     </div>
 </form>
 {{ end }}
+{{ template "base.html" . }}
 {{/* vim: set ts=4 sts=4 sw=4 et: */}}

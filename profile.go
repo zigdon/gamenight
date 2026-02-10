@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"net/url"
@@ -108,6 +109,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		Tab:     "profile",
 	}
 
+	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
 	if r.Method == http.MethodPost {
 		log.Printf("Handling POST")
 		// Parse form data

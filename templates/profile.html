@@ -1,43 +1,57 @@
-{{ template "base.html" }}
-{{ define "title" }}Gamenight host profile{{ end }}
-{{ define "content" }}
-<form method="post">
-    <div class="row-fluid">
-        <div class="span6">
+{{ define "Title" }}Gamenight host profile{{ end }}
+{{ define "Content" }}
+<div class="row-fluid">
+    <div>
+        <form method="post">
             <fieldset>
-                <legend>Profile{{ if .User.Superuser }}: {{ .Profile.Id }}{{ end }}</legend>
-                <label for="name">Name</label>
-                <input id="name" name="name" type="text" value="{{ .Profile.Name }}" />
-                <label for="location">Default location</label>
-                <input id="location" name="location" type="text" value="{{ .Profile.Location }}" />
-                <label for="location">Get email if gamenight needs scheduling?</label>
-                <input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} />
-                    Get nag email
-                </label>
-                <br />
+                <legend>Profile{{ if .User.Superuser }}: {{ .Profile.ID.Name }}{{ end }}</legend>
+                <table>
+                    <tr><th>Email"</th><td>{{ .Profile.ID.Name }}</td></tr>
+                    <tr><th><label for="name">Name</label></th>
+                        <td><input id="name" name="name" type="text" value="{{ .Profile.Name }}" /></td></tr>
+                    <tr><th><label for="location">Default location</label></th>
+                        <td><input id="location" name="location" type="text" value="{{ .Profile.DefaultLocation }}" /></td></tr>
+                    <tr><th><label for="nag">Get an email if gamenight needs scheduling?</label></th>
+                        <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} /></td></tr>
+                        <tr><th><label for="notify">Get an email when a gamenight is scheduled?</label></th>
+                            <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} /></td></tr>
                 {{ if .User.Superuser }}
-                    <input type="hidden" id="pid" name="pid" value="{{ .Profile.id }}" />
-                    <label>
-                        <input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }} />
-                        Admin
-                    </label>
+                    <tr><th>
+                        <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />
+                        <label for="admin">Admin</label></th>
+                        <td><input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }} /></td></tr>
                 {{ end }}
+                </table>
                 <button type="submit" class="btn">Save</button>
             </fieldset>
-        </div>
-        <div class="span6">
-            {{ if .User.Superuser }}
-                <legend>Users:</legend>
-                <ul>
-                    {{ range $u := .Users }}
-                        <li>{{ $u.Id }}: {{ $u.Name }}
-                            <button type="submit" class="close" id="edit" name="edit" value="{{ $u.Id }}">edit</button>
-                        </li>
-                    {{ end }}
-                </ul>
-            {{ end }}
-        </div>
+        </form>
     </div>
-</form>
+    <div class="span6">
+        {{ if and .User.Superuser .Users }}
+            <form method="get">
+                <legend>Users:</legend>
+                <table width="100%">
+                    <tr>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Nag emails</th>
+                        <th>Notify emails</th>
+                    </tr>
+                    {{ range $u := .Users }}
+                    <tr><td>{{ $u.ID.Name }}</td>
+                        <td>{{ $u.Name }}</td>
+                        <td>{{ $u.DefaultLocation }}</td>
+                        <td>{{ if $u.Emails }}Enabled{{ else }}Disabled{{ end }}</td>
+                        <td>{{ if $u.Notify }}Enabled{{ else }}Disabled{{ end }}</td>
+                        <td><button type="submit" class="close" id="edit" name="edit" value="{{ $u.ID.Name }}">edit</button></td>
+                        </tr>
+                    {{ end }}
+                </table>
+        </form>
+        {{ end }}
+    </div>
+</div>
 {{ end }}
+{{ template "base.html" . }}
 {{/* vim: set ts=4 sts=4 sw=4 et: */}}

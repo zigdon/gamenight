@@ -56,6 +56,16 @@ a {
     color: gray;
 }
 
+th {
+    padding-top: 4px;
+    padding-right: 10px;
+    text-align: left;
+}
+
+td {
+    vertical-align: top;
+}
+
 .error {
     background-color: #f08080;
     border: 1px solid black;

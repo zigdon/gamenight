@@ -64,28 +64,69 @@ func parseTimespec(timespec string) (time.Time, error) {
 	// Try to parse as specific layout first, then more general ones.
 	// Example: "Saturday, 8pm", "Oct 12, 7:30pm"
 	layouts := []string{
-		"2006-01-02 3pm",              // 0: YYYY-MM-DD HHpm
-		"2006-01-02 15:04",            // 1: YYYY-MM-DD HH:mm
-		"2006-01-02",                  // 2: YYYY-MM-DD
-		"Jan 2 15:04",                 // 3: mmm DD HH:mm
-		"Jan 2",                       // 4: mmm DD
-		"1/2 15:04",                   // 5: MM/DD HH:mm
-		"1/2 3pm",                     // 6: MM/DD HHpm
-		"1/2",                         // 7: MM/DD
+		"2006-01-02 3pm",
+		"2006-01-02, 3pm",
+		"2006-01-02 3:04pm",
+		"2006-01-02, 3:04pm",
+		"2006-01-02 15:04",
+		"2006-01-02, 15:04",
+		"2006-01-02",
+		"Jan 2 3pm",
+		"Jan 2, 3pm",
+		"Jan 2 3:04pm",
+		"Jan 2, 3:04pm",
+		"Jan 2 15:04",
+		"Jan 2, 15:04",
+		"Jan 2",
+		"1/2 3pm",
+		"1/2, 3pm",
+		"1/2 3:04pm",
+		"1/2, 3:04pm",
+		"1/2 15:04",
+		"1/2, 15:04",
+		"1/2",
+		// from here on we're really reaching (n=21)
+		"Monday 3pm",
+		"Monday, 3pm",
+		"Monday 3:04pm",
+		"Monday, 3:04pm",
+		"Monday 15:04",
+		"Monday, 15:04",
+		"Monday",
 	}
-	found := false
-	for _, layout := range layouts {
+	found := -1
+	for n, layout := range layouts {
 		parsedTime, err = time.Parse(layout, timespec)
 		if err == nil {
 			log.Printf("Parsed date %q as %q: %s", timespec, layout, parsedTime)
-			found = true
+			found = n
 			break
 		}
 		log.Printf("Failed to parse date %q as %q: %v", timespec, layout, err)
 	}
 
-	if !found {
+	if found == -1 {
 		return parsedTime, err
+	}
+
+	// If all we got was a weekday (and maybe a time), the date will parse
+	// as 0000-01-01. In that case, we need to get the weekday requested, and
+	// find the next one of those for the date.
+	if (found >= 21) {
+		req := strings.ToLower(strings.Split(strings.Split(timespec, ",")[0], " ")[0])
+		cur := time.Now()
+		cnt := 0
+		log.Printf("Looking for the next %q", req)
+		for strings.ToLower(cur.Weekday().String()) != req {
+			if cnt > 7 {
+				return parsedTime, fmt.Errorf("Can't figure out what you mean by %q", req)
+			}
+			cnt++
+			cur = cur.AddDate(0, 0, 1)
+		}
+		log.Printf("Found %s", cur.Format("2006-01-02"))
+		parsedTime = parsedTime.AddDate(cur.Year(), int(cur.Month())-1, cur.Day()-1)
+		log.Printf("Parsed: %s", parsedTime.String())
 	}
 
 	if parsedTime.Hour() == 0 {
