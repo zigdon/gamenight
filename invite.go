@@ -67,10 +67,11 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		Key: datastore.IncompleteKey("Invitation", nil),
 		Date:     parsedTime.UTC(),
 		Time:     parsedTime.UTC(),
-		Owner:    user.ID,
 		Location: whereStr,
 		Notes:    notesStr,
 		Priority: PriorityUndefined,
+
+		OwnerKey:    user.ID,
 	}
 
 	// Parse Priority string to Priority enum
@@ -147,7 +148,7 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		data.Base.Error = "Invalid request"
 		return fmt.Errorf("failed to find invite %v: %v", key, err)
 	}
-	if !inv.Owner.Equal(user.ID) && !user.Superuser {
+	if !inv.OwnerKey.Equal(user.ID) && !user.Superuser {
 		data.Base.Error = "Invalid request"
 		return fmt.Errorf("%v not owner of %#v", user, inv)
 	}

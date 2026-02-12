@@ -9,7 +9,9 @@
                     <ul>
                         {{ if and $day.Scheduled $day.Scheduled.Owner }}{{ with $day.Scheduled }}
                             <li class="scheduled">
-                                {{ .Owner.Name }}:
+                                {{ .Owner.Name }}{{if $.Base.User.Superuser }}
+                                    ({{.Owner.Email }})
+                                {{- end }}:
                                 {{ .When.Format "01/02/2006 3:04pm"  }} @ {{ .Location }}
                                 {{ if .Notes }}<br/>{{ .Notes }}{{ end }}
                             </li>
@@ -18,7 +20,9 @@
                         {{ end }}
                         {{ range $invite := $day.Invitations }}
                             <li>
-                                {{ $invite.Owner.Name }}:
+                                {{ $invite.Owner.Name }}{{if $.Base.User.Superuser }}
+                                    ({{.Owner.Email }})
+                                {{- end }}:
                                 {{ $invite.When.Format "01/02/2006 3:04pm"  }}
                                 @ {{ $invite.Location }}
                                 ({{ $invite.PriorityText }})

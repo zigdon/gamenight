@@ -59,17 +59,18 @@ func getUser(ctx context.Context, email string) (*User, error) {
 }
 
 type invLoader struct {
-	Key          *datastore.Key `datastore:"__key__" json:"key"`
-	Date         time.Time      `datastore:"d" json:"date"`
-	Time         time.Time      `datastore:"t" json:"time"`
-	Owner        *datastore.Key `datastore:"o" json:"owner"`
-	Location     string         `datastore:"l" json:"location"`
-	Notes        string         `datastore:"n" json:"notes"`
+	Key          *datastore.Key `datastore:"__key__"`
+	Date         time.Time      `datastore:"d"`
+	Time         time.Time      `datastore:"t"`
+	Location     string         `datastore:"l"`
+	Notes        string         `datastore:"n"`
 	// TODO: Convert old entries from string to int, so we can remove this hack.
 	// Handle either string or int, since we changed how we do this.
-	Priority     any            `datastore:"p" json:"priority"`
-	DateText     string         `datastore:"datetext" json:"-"`
-	PriorityText string         `datastore:"priority_text" json:"-"`
+	Priority     any            `datastore:"p"`
+	DateText     string         `datastore:"datetext"`
+	PriorityText string         `datastore:"priority_text"`
+
+	OwnerKey        *datastore.Key `datastore:"o"`
 }
 
 func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
@@ -87,7 +88,7 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 			Key: k,
 			Date: il.Date,
 			Time: il.Time,
-			Owner: il.Owner,
+			OwnerKey: il.OwnerKey,
 			Location: il.Location,
 			Notes: il.Notes,
 		}
