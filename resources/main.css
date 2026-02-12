@@ -57,13 +57,13 @@ a {
 }
 
 th {
-    padding-top: 4px;
-    padding-right: 10px;
+    padding: 4px;
     text-align: left;
 }
 
 td {
     vertical-align: top;
+    padding: 4px;
 }
 
 .error {

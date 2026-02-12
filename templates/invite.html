@@ -42,10 +42,10 @@
                 <ul>
                     {{ range $invite := .Invitations }}
                         <li>
-                            {{ if or $invite.IsOwner $.User.Superuser }}
+                            {{ if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
                               <button type="submit" class="close" name="withdraw" value="{{ $invite.Key.ID }}">x</button>
                             {{ end }}
-                            {{ if $.User.Superuser }}
+                            {{ if $.Base.User.Superuser }}
                                 {{ $invite.Owner.Name }} -
                             {{ end }}
                             {{ $invite.When.Format "2006-01-02 3:04pm" }} @

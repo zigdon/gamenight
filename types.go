@@ -26,6 +26,24 @@ const (
 	PriorityInsist                    // 3
 )
 
+func PriorityFromText(p string) Priority {
+	switch p {
+		case "Can": return PriorityCan
+		case "Want": return PriorityWant
+		case "Insist": return PriorityInsist
+		default: return PriorityUndefined
+	}
+}
+
+func (p Priority) Description() string {
+	switch p {
+		case PriorityCan: return "Can host"
+		case PriorityWant: return "Want to host"
+		case PriorityInsist: return "Would really want to host"
+		default: return ""
+	}
+}
+
 type BaseTemplate struct {
 	Tab string
 	Error string
@@ -76,7 +94,20 @@ type Invitation struct {
 	Location string         `datastore:"l" json:"location"`
 	Notes    string         `datastore:"n" json:"notes"`
 	Priority Priority       `datastore:"p" json:"priority"`
-	IsOwner  bool           `datastore:"-" json:"_isowner"`
+}
+
+func (i Invitation) DateText() string {
+	suf := "th"
+	switch i.Date.Day() {
+		case 1: suf = "st"
+		case 2: suf = "nd"
+		case 3: suf = "rd"
+	}
+	return fmt.Sprintf(i.When().Format("Monday, Jan 2%s, 2006 at 3:04 pm"), suf)
+}
+
+func (i Invitation) IsOwner(u User) bool {
+	return i.Owner.Equal(u.ID)
 }
 
 func (i Invitation) When() time.Time {

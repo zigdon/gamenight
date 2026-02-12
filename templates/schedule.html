@@ -7,20 +7,22 @@
                 <div class="span12">
                     <h3 class="muted"> {{ $day.Date }} </h3>
                     <ul>
-                        {{ if $day.Scheduled }}
-                            {{ if $day.Status eq 1 }}
-                                <li class="scheduled">
-                                    {{ $day.Owner.Name }}: {{ $day.Time }} @ {{ $day.Where }}
-                                </li>
-                            {{ else }}
-                                <li class="missing">None scheduled yet.</li>
-                            {{ end }}
+                        {{ if and $day.Scheduled $day.Scheduled.Owner }}{{ with $day.Scheduled }}
+                            <li class="scheduled">
+                                {{ .Owner.Name }}:
+                                {{ .When.Format "01/02/2006 3:04pm"  }} @ {{ .Location }}
+                                {{ if .Notes }}<br/>{{ .Notes }}{{ end }}
+                            </li>
+                        {{ end }}{{ else }}
+                            <li>None scheduled</li>
                         {{ end }}
                         {{ range $invite := $day.Invitations }}
                             <li>
-                                {{ $invite.Owner.Name }} @
-                                {{ $invite.Location }}
-                                ({{ $invite.Priority_text }})
+                                {{ $invite.Owner.Name }}:
+                                {{ $invite.When.Format "01/02/2006 3:04pm"  }}
+                                @ {{ $invite.Location }}
+                                ({{ $invite.PriorityText }})
+                                {{ if $invite.Notes }}: {{ $invite.Notes }}{{ end }}
                             </li>
                         {{ end }}
                     </ul>

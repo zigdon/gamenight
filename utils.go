@@ -58,6 +58,52 @@ func getUser(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
+type invLoader struct {
+	Key          *datastore.Key `datastore:"__key__" json:"key"`
+	Date         time.Time      `datastore:"d" json:"date"`
+	Time         time.Time      `datastore:"t" json:"time"`
+	Owner        *datastore.Key `datastore:"o" json:"owner"`
+	Location     string         `datastore:"l" json:"location"`
+	Notes        string         `datastore:"n" json:"notes"`
+	// TODO: Convert old entries from string to int, so we can remove this hack.
+	// Handle either string or int, since we changed how we do this.
+	Priority     any            `datastore:"p" json:"priority"`
+	DateText     string         `datastore:"datetext" json:"-"`
+	PriorityText string         `datastore:"priority_text" json:"-"`
+}
+
+func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
+	q := datastore.NewQuery("Invitation").FilterField("d", ">=", cutoff)
+	var ils []invLoader
+	ks, err := dsClient.GetAll(ctx, q, &ils)
+	if err != nil {
+		return nil, fmt.Errorf("error loading invitations: %v", err)
+	}
+
+	var invs []Invitation
+	for n, k := range ks {
+		il := ils[n]
+		i := Invitation{
+			Key: k,
+			Date: il.Date,
+			Time: il.Time,
+			Owner: il.Owner,
+			Location: il.Location,
+			Notes: il.Notes,
+		}
+		if p, ok := il.Priority.(string); ok {
+			i.Priority = PriorityFromText(p)
+		} else if p, ok := il.Priority.(int64); ok {
+			i.Priority = Priority(p)
+		} else {
+			return nil, fmt.Errorf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
+		}
+		invs = append(invs, i)
+	}
+
+	return invs, nil
+}
+
 func parseTimespec(timespec string) (time.Time, error) {
 	var parsedTime time.Time
 	var err error

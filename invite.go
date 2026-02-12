@@ -187,10 +187,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for n, i := range invs {
-		invs[n].IsOwner = i.Owner.Equal(user.ID)
-	}
-
 	data := &InviteData{
 		Base: BaseTemplate{Tab: "invite", User: user},
 		Invitations: invs,
