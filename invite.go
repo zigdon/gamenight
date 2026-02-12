@@ -176,12 +176,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	var invs []Invitation
-	invQ := datastore.NewQuery("Invitation").
-	    FilterField("d", ">", time.Now()).
-		Order("d")
-
-	_, err = dsClient.GetAll(ctx, invQ, &invs)
+	invs, err := getAllInvitations(ctx, time.Now())
 	if err != nil {
 		log.Printf("query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

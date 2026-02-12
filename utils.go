@@ -70,7 +70,7 @@ type invLoader struct {
 	DateText     string         `datastore:"datetext"`
 	PriorityText string         `datastore:"priority_text"`
 
-	OwnerKey        *datastore.Key `datastore:"o"`
+	OwnerKey     *datastore.Key `datastore:"o"`
 }
 
 func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
@@ -98,6 +98,9 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 			i.Priority = Priority(p)
 		} else {
 			return nil, fmt.Errorf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
+		}
+		if err := i.Load(ctx); err != nil {
+			return nil, fmt.Errorf("Error filling invite: %v", err)
 		}
 		invs = append(invs, i)
 	}
