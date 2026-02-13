@@ -33,7 +33,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-    log.Printf("Datastore client initialized successfully.")
 
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/logout", handleLogout)
@@ -57,34 +56,37 @@ func main() {
 
 func handleDebug(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	out := func(t string, args ...any) {
+		fmt.Fprintf(w, t+"\n", args...)
+	}
 	w.Header().Set("Content-Type", "text/html")
 	if err := r.ParseForm(); err != nil {
-		fmt.Fprintf(w, "Error parsing form data: %v", err)
+		out("Error parsing form data: %v", err)
 	}
 	if r.FormValue("delete") == "Submit" {
 		t := r.FormValue("type")
 		id, err := strconv.Atoi(r.FormValue("id"))
 		if err != nil {
-			fmt.Fprintf(w, "Can't parse %q: %v", r.FormValue("key"), err)
+			out("Can't parse %q: %v", r.FormValue("key"), err)
 		}
 		key := datastore.IDKey(t, int64(id), nil)
 		var gn Gamenight
 		err = dsClient.Get(ctx, key, &gn)
 		if err != nil {
-			fmt.Fprintf(w, "Error loading %v to delete: %v", key, err)
+			out("Error loading %v to delete: %v", key, err)
 		} else if err := dsClient.Delete(ctx, key); err != nil {
-			fmt.Fprintf(w, "Error deleting %v: %v", key, err)
+			out("Error deleting %v: %v", key, err)
 		} else {
-			fmt.Fprintf(w, "Deleted %v", key)
+			out("Deleted %v", key)
 		}
 	}
-	fmt.Fprintf(w, "<form>Delete:<br/>kind <input name=\"type\"/> ")
-	fmt.Fprintf(w, "id <input name=\"id\"/> ")
-	fmt.Fprintf(w, "<input name=\"delete\" type=\"submit\"/></form><hr/>")
-	fmt.Fprintf(w, "<pre>")
-	fmt.Fprintf(w, "Gamenights:\n")
+	out("<form>Delete:<br/>kind <input name=\"type\"/> ")
+	out("id <input name=\"id\"/> ")
+	out("<input name=\"delete\" type=\"submit\"/></form><hr/>")
+	out("<pre>")
+	out("Gamenights:")
 	var gns []Gamenight
-	_, err := dsClient.GetAll(ctx, datastore.NewQuery("Gamenight").Order("-d"), &gns)
+	_, err := dsClient.GetAll(ctx, datastore.NewQuery("Gamenight").FilterField("d", ">", time.Now()).Order("-d"), &gns)
 	if err != nil {
 		log.Printf("gn query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -100,24 +102,32 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		} else {
 			id = fmt.Sprintf("%d", gn.InviteKey.ID)
 		}
-		fmt.Fprintf(w, "%20d | %s | %s\n", gn.ID.ID, gn.When(), id)
+		out("%20d | %s | %s", gn.ID.ID, gn.When(), id)
 	}
 
-	fmt.Fprintf(w, "Invitations:\n")
-	invs, err := getAllInvitations(ctx, time.Unix(0, 0))
+	invs, err := getAllInvitations(ctx, time.Now().In(tz()))
 	if err != nil {
-		log.Printf("inv query err: %v", err)
+		out("inv query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	out("\nInvitations (%d):", len(invs))
 	slices.SortFunc(invs, func(a, b Invitation) int {
 		return int(b.When().Unix()-a.When().Unix())
 	})
 	for _, i := range invs {
 		if err := i.Load(ctx); err != nil {
-			fmt.Fprintf(w, "Error loading invite: %v", err)
+			out("Error loading invite: %v", err)
 		}
-		fmt.Fprintf(w, "%20d | %s | %15s | %s: %s\n", i.Key.ID, i.When(), i.GetOwner().Name, i.Location, i.Notes)
+		gnid := int64(-1)
+		gn, err := i.GetGamenight(ctx)
+		if err != nil {
+			out("error getting gn: %v", err)
+		}
+		if gn != nil {
+			gnid = gn.ID.ID
+		}
+		out("%20d | %s | %15s | %20d | %s: %s", i.Key.ID, i.When(), i.GetOwner().Name, gnid, i.Location, i.Notes)
 	}
 
 	userQ := datastore.NewQuery("User")
@@ -125,13 +135,13 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 	var users []User
 	_, err = dsClient.GetAll(ctx, userQ, &users)
 	if err != nil {
-		log.Printf("user query err: %v", err)
+		out("user query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "\nUsers:\n")
+	out("\nUsers:")
 	for _, i := range users {
-		fmt.Fprintf(w, "%#v: %#v\n", i.ID, i)
+		out("%#v: %#v", i.ID, i)
 	}
 }
 
@@ -144,7 +154,7 @@ func mkDefault() Gamenight {
 	// Before tuesday, say probably. 
 	// Before friday, say maybe.
 	// Then say no.
-	switch (time.Now().Weekday()) {
+	switch (time.Now().In(tz()).Weekday()) {
 	case time.Sunday, time.Monday, time.Tuesday:
 		return Gamenight{Status: "Probably"}
 	case time.Wednesday, time.Thursday, time.Friday:
@@ -158,7 +168,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var sched Gamenight
 	var gns []Gamenight
-	now := time.Now()
+	now := time.Now().In(tz())
 	found := make(map[string]bool)
 	schQ := datastore.NewQuery("Gamenight").
 		FilterField("s", "=", "Yes").
@@ -175,6 +185,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		sched = mkDefault()
 	} else {
 		sched = gns[0]
+		sched.Date = sched.Date.In(tz())
+		sched.Time = sched.Time.In(tz())
 		if err := sched.Load(ctx); err != nil {
 			log.Printf("Error loading %s: %v", sched.ID, err)
 		}
@@ -260,7 +272,6 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		Updated: now,
 		CalendarID: config(ctx, "calendar_id"),
 	}
-	log.Printf("Current: %#v", sched)
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/index.html"))
 	err = tmpl.ExecuteTemplate(w, "index.html", data)
 	if err != nil {

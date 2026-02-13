@@ -73,7 +73,7 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 
 	// Execution:
 	// 1. Examine all pending invites.
-	now := time.Now()
+	now := time.Now().In(tz())
 
 	invs, err := getAllInvitations(ctx, now)
 	if err != nil {
@@ -87,7 +87,7 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 
 	// Up to midnight of next saturday, or next GN date, whichever is first.
 	next := time.Date(now.Year(), now.Month(), now.Day(),
-	    0, 0, 0, 0, now.Location()).AddDate(0, 0, int(7-now.Weekday()))
+	    0, 0, 0, 0, tz()).AddDate(0, 0, int(7-now.Weekday()))
 	if nextGN, err := getNextGamenight(ctx); err != nil {
 		out("Couldn't find next gamenight: %v", err)
 	} else {

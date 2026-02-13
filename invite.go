@@ -60,13 +60,13 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		return fmt.Errorf("failed to parse timespec: %v", err)
 	}
 
-	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04"))
+	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04 MST"))
 
 	// Create an Invitation entity
 	invite := Invitation{
 		Key: datastore.IncompleteKey("Invitation", nil),
-		Date:     parsedTime.UTC(),
-		Time:     parsedTime.UTC(),
+		Date:     parsedTime,
+		Time:     parsedTime,
 		Location: whereStr,
 		Notes:    notesStr,
 		Priority: PriorityUndefined,
@@ -152,18 +152,25 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		data.Base.Error = "Invalid request"
 		return fmt.Errorf("%v not owner of %#v", user, inv)
 	}
-	if gn, err := inv.GetGamenight(ctx); err != nil {
+	gn, err := inv.GetGamenight(ctx)
+	if err != nil {
+		log.Printf("Error finding a gamenight from invite %v: %v", key, err)
+		data.Base.Error = "Failed to cancel gamenight"
+		return fmt.Errorf("Can't withdraw gn")
+	}
+	if gn != nil {
 		if err := gn.Delete(ctx); err != nil {
 			log.Printf("Error deleting gamenight %s: %v", gn.String(), err)
+		} else {
+			log.Printf("Deleted gn: %s", gn.String())
 		}
-	} else {
-		log.Printf("Error finding a gamenight from invite %v: %v", key, err)
 	}
 	if err := dsClient.Delete(ctx, key); err != nil {
 		data.Base.Error = "Failed to withdraw invite"
 		return fmt.Errorf("error deleting invite %#v: %v", inv, err)
 	}
 	data.Base.Msg = "Invitation withdrawn"
+	log.Printf("Invitation %s withdrawn by %s", inv.String(), user.ID)
 	return nil
 }
 
@@ -183,7 +190,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-	invs, err := getAllInvitations(ctx, time.Now())
+	invs, err := getAllInvitations(ctx, time.Now().In(tz()))
 	if err != nil {
 		log.Printf("query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

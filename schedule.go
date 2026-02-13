@@ -4,7 +4,6 @@ import (
 	"log"
 	"html/template"
 	"net/http"
-	"slices"
 	"sort"
 	"time"
 
@@ -44,7 +43,7 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/schedule.html"))
 
 	// List all the currently scheduled gamenights
-	now := time.Now()
+	now := time.Now().In(tz())
 	q := datastore.NewQuery("Gamenight").FilterField("d", ">=", now)
 	var gns []Gamenight
 	ks, err := dsClient.GetAll(ctx, q, &gns)
@@ -99,7 +98,6 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 		days[date] = e
 	}
 	sort.Strings(dayList)
-	slices.Reverse(dayList)
 	for _, k := range dayList {
 		data.Days = append(data.Days, days[k])
 	}

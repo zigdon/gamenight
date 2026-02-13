@@ -99,6 +99,9 @@ func (g Gamenight) GetOwner() User {
 }
 
 func (g *Gamenight) Delete(ctx context.Context) error {
+	if g == nil {
+		return nil
+	}
 	if g.EventID != "" {
 		if err := g.RemoveEvent(ctx); err != nil {
 			return fmt.Errorf("Error removing event %s: %v", g.EventID, err)
@@ -131,6 +134,9 @@ func (g *Gamenight) Load(ctx context.Context) error {
 			log.Printf("error getting invite %v for %v: %v", g.InviteKey, g.ID, err)
 		}
 	}
+	// Convert the time into localtime, because timezone are the WORST.
+	g.Date = g.Date.In(tz())
+	g.Time = g.Time.In(tz())
 	return nil
 }
 
@@ -164,8 +170,7 @@ func (i Invitation) GetOwner() User {
 }
 
 func (i Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
-	q := datastore.NewQuery("Gamenight").
-	    FilterField("a", "=", i.Key)
+	q := datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key)
 	var gns []Gamenight
 	ks, err := dsClient.GetAll(ctx, q, &gns)
 	if err != nil {
@@ -184,6 +189,9 @@ func (i *Invitation) Load(ctx context.Context) error {
 		return fmt.Errorf("error getting owner %v for %v: %v", i.OwnerKey, i.Key, err)
 	}
 	i.Owner = owner
+	// Convert the time into localtime, because timezone are the WORST.
+	i.Date = i.Date.In(tz())
+	i.Time = i.Time.In(tz())
 	return nil
 }
 
@@ -224,6 +232,43 @@ func (i Invitation) String() string {
 		i.When(), i.GetOwner().Name, i.Location, i.PriorityText(), i.Notes)
 }
 
+type invLoader struct {
+	Key          *datastore.Key `datastore:"__key__"`
+	Date         time.Time      `datastore:"d"`
+	Time         time.Time      `datastore:"t"`
+	Location     string         `datastore:"l"`
+	Notes        string         `datastore:"n"`
+	// TODO: Convert old entries from string to int, so we can remove this hack.
+	// Handle either string or int, since we changed how we do this.
+	Priority     any            `datastore:"p"`
+	DateText     string         `datastore:"datetext"`
+	PriorityText string         `datastore:"priority_text"`
+
+	OwnerKey     *datastore.Key `datastore:"o"`
+	// unused?
+	Owner        *User
+}
+
+func (il invLoader) Convert() Invitation {
+	i := Invitation{
+		Key: il.Key,
+		Date: il.Date.In(tz()),
+		Time: il.Time.In(tz()),
+		OwnerKey: il.OwnerKey,
+		Location: il.Location,
+		Notes: il.Notes,
+	}
+	if p, ok := il.Priority.(string); ok {
+		i.Priority = PriorityFromText(p)
+	} else if p, ok := il.Priority.(int64); ok {
+		i.Priority = Priority(p)
+	} else {
+		log.Printf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
+	}
+
+	return i
+}
+
 
 type Config struct {
 	Name  string `datastore:"n"`
@@ -235,10 +280,6 @@ type Auth struct {
 }
 
 func dateTime(d, t time.Time) time.Time {
-	tz, err := time.LoadLocation("America/Los_Angeles")
-	if err != nil {
-		panic(fmt.Sprintf("Error loading tz: %v", err))
-	}
 	return time.Date(
-		d.Year(), d.Month(), d.Day(), t.Hour(), t.Minute(), t.Second(), 0, tz)
+		d.Year(), d.Month(), d.Day(), t.Hour(), t.Minute(), t.Second(), 0, tz())
 }

@@ -10,6 +10,14 @@ import (
 	"cloud.google.com/go/datastore"
 )
 
+func tz() *time.Location {
+	tz, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		panic(fmt.Sprintf("How do we not have a tz? %v", err))
+	}
+	return tz
+}
+
 func config(ctx context.Context, id string) string {
 	cQ := datastore.NewQuery("Config").FilterField("n", "=", id)
 	var cfgs []Config
@@ -58,41 +66,6 @@ func getUser(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-type invLoader struct {
-	Key          *datastore.Key `datastore:"__key__"`
-	Date         time.Time      `datastore:"d"`
-	Time         time.Time      `datastore:"t"`
-	Location     string         `datastore:"l"`
-	Notes        string         `datastore:"n"`
-	// TODO: Convert old entries from string to int, so we can remove this hack.
-	// Handle either string or int, since we changed how we do this.
-	Priority     any            `datastore:"p"`
-	DateText     string         `datastore:"datetext"`
-	PriorityText string         `datastore:"priority_text"`
-
-	OwnerKey     *datastore.Key `datastore:"o"`
-}
-
-func (il invLoader) Convert() Invitation {
-	i := Invitation{
-		Key: il.Key,
-		Date: il.Date,
-		Time: il.Time,
-		OwnerKey: il.OwnerKey,
-		Location: il.Location,
-		Notes: il.Notes,
-	}
-	if p, ok := il.Priority.(string); ok {
-		i.Priority = PriorityFromText(p)
-	} else if p, ok := il.Priority.(int64); ok {
-		i.Priority = Priority(p)
-	} else {
-		log.Printf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
-	}
-
-	return i
-}
-
 func getInvite(ctx context.Context, k *datastore.Key) (Invitation, error) {
 	var i invLoader
 	if err := dsClient.Get(ctx, k, &i); err != nil {
@@ -124,7 +97,7 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 }
 
 func getNextGamenight(ctx context.Context) (*Gamenight, error) {
-	now := time.Now()
+	now := time.Now().In(tz())
 	q := datastore.NewQuery("Gamenight").
 		FilterField("d", ">=",
 		time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())).
@@ -179,7 +152,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	}
 	found := -1
 	for n, layout := range layouts {
-		parsedTime, err = time.Parse(layout, timespec)
+		parsedTime, err = time.ParseInLocation(layout, timespec, tz())
 		if err == nil {
 			log.Printf("Parsed date %q as %q: %s", timespec, layout, parsedTime)
 			found = n
@@ -197,7 +170,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	// find the next one of those for the date.
 	if (found >= 21) {
 		req := strings.ToLower(strings.Split(strings.Split(timespec, ",")[0], " ")[0])
-		cur := time.Now()
+		cur := time.Now().In(tz())
 		cnt := 0
 		log.Printf("Looking for the next %q", req)
 		for strings.ToLower(cur.Weekday().String()) != req {
@@ -217,7 +190,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	}
 
 	// Default year is this year unless it's in the past
-	now := time.Now()
+	now := time.Now().In(tz())
 	if parsedTime.Year() == 0 {
 		parsedTime = parsedTime.AddDate(now.Year(), 0, 0)
 		if (parsedTime.Before(now)) {
