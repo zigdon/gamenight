@@ -88,6 +88,24 @@ type Gamenight struct {
 	owner    *datastore.Key `datastore:"o"`
 }
 
+func (g Gamenight) Delete(ctx context.Context) error {
+	if g.EventID != "" {
+		if err := g.RemoveEvent(ctx); err != nil {
+			return fmt.Errorf("Error removing event %s: %v", g.EventID, err)
+		}
+	}
+
+	return dsClient.Delete(ctx, g.ID)
+}
+
+func (g Gamenight) CreateEvent(ctx context.Context) (string, error) {
+	return "Not implemented", fmt.Errorf("Not implemented")
+}
+
+func (g Gamenight) RemoveEvent(ctx context.Context) error {
+	return fmt.Errorf("Not implemented")
+}
+
 func (g Gamenight) Load(ctx context.Context) error {
 	if err := dsClient.Get(ctx, g.owner, &g.Owner); err != nil {
 		return fmt.Errorf("error getting owner %v for %v: %v", g.owner, g.ID, err)
@@ -119,6 +137,21 @@ type Invitation struct {
 	Owner    *User
 
 	OwnerKey    *datastore.Key `datastore:"o"`
+}
+
+func (i *Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
+	q := datastore.NewQuery("Gamenight").
+	    FilterField("a", "=", i.Key)
+	var gns []Gamenight
+	ks, err := dsClient.GetAll(ctx, q, &gns)
+	if err != nil {
+		return nil, fmt.Errorf("can't query for gamenight for %s: %b",
+		    i.String(), err)
+	}
+	if len(ks) == 0 {
+		return nil, nil
+	}
+	return &gns[0], nil
 }
 
 func (i *Invitation) Load(ctx context.Context) error {
@@ -159,6 +192,12 @@ func (i *Invitation) PriorityText() string {
 	default:
 		return ""
 	}
+}
+
+func (i *Invitation) String() string {
+	return fmt.Sprintf(
+		"%s: %s @ %s (%s): %s",
+		i.When(), i.Owner.Name, i.Location, i.PriorityText(), i.Notes)
 }
 
 

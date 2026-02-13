@@ -152,6 +152,13 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		data.Base.Error = "Invalid request"
 		return fmt.Errorf("%v not owner of %#v", user, inv)
 	}
+	if gn, err := inv.GetGamenight(ctx); err != nil {
+		if err := gn.Delete(ctx); err != nil {
+			log.Printf("Error deleting gamenight %s: %v", gn.String(), err)
+		}
+	} else {
+		log.Printf("Error finding a gamenight from invite %v: %v", key, err)
+	}
 	if err := dsClient.Delete(ctx, key); err != nil {
 		data.Base.Error = "Failed to withdraw invite"
 		return fmt.Errorf("error deleting invite %#v: %v", inv, err)

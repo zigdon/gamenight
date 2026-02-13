@@ -41,7 +41,7 @@ func main() {
 	http.HandleFunc("/schedule", handleSchedule)
 	//http.HandleFunc("/tasks/nag", nil)
 	//http.HandleFunc("/tasks/reset", nil)
-	//http.HandleFunc("/tasks/schedule", nil)
+	http.HandleFunc("/tasks/schedule", handleTaskSchedule)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -127,8 +127,11 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		found[fmt.Sprintf("%s@%s", sched.Owner.Name, sched.When())] = true
 	}
 
+	// Midnight on this saturday.
+	sat := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0,0,7-now.Day())
 	gnQ := datastore.NewQuery("Gamenight").
-		FilterField("d", ">", now.AddDate(0,0,-2)).
+		FilterField("d", "<", sat).
+		FilterField("d", ">=", now).
 		Order("d")
 
 	gns = []Gamenight{}

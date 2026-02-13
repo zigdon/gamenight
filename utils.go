@@ -108,6 +108,24 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 	return invs, nil
 }
 
+func getNextGamenight(ctx context.Context) (*Gamenight, error) {
+	now := time.Now()
+	q := datastore.NewQuery("Gamenight").
+		FilterField("d", ">=",
+		time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())).
+		Order("d").
+		Limit(1)
+	var gns []Gamenight
+	if _, err := dsClient.GetAll(ctx, q, &gns); err != nil {
+		return nil, fmt.Errorf("error getting next gamenight: %v", err)
+	}
+	if len(gns) == 0 {
+		return nil, fmt.Errorf("no gamenight found")
+	}
+	log.Printf("Next gamenight: %s", gns[0].String())
+	return &gns[0], nil
+}
+
 func parseTimespec(timespec string) (time.Time, error) {
 	var parsedTime time.Time
 	var err error
