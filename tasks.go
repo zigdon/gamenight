@@ -58,7 +58,7 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		out = func(t string, args ...any) {
 			log.Printf(t, args...)
-			fmt.Fprintf(w, t, args...)
+			fmt.Fprintf(w, t+"\n", args...)
 		}
 	}
 
@@ -154,8 +154,8 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 		Time: i.When(),  // Redundant and obsolete, but keep filling it for now.
 		Location: i.Location,
 		Notes: i.Notes,
-		owner: i.OwnerKey,
-		invite: i.Key,
+		OwnerKey: i.OwnerKey,
+		InviteKey: i.Key,
 	}
 
 	nk, err := dsClient.Put(ctx, gn.ID, gn)

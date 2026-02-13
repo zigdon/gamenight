@@ -73,6 +73,35 @@ type invLoader struct {
 	OwnerKey     *datastore.Key `datastore:"o"`
 }
 
+func (il invLoader) Convert() Invitation {
+	i := Invitation{
+		Key: il.Key,
+		Date: il.Date,
+		Time: il.Time,
+		OwnerKey: il.OwnerKey,
+		Location: il.Location,
+		Notes: il.Notes,
+	}
+	if p, ok := il.Priority.(string); ok {
+		i.Priority = PriorityFromText(p)
+	} else if p, ok := il.Priority.(int64); ok {
+		i.Priority = Priority(p)
+	} else {
+		log.Printf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
+	}
+
+	return i
+}
+
+func getInvite(ctx context.Context, k *datastore.Key) (Invitation, error) {
+	var i invLoader
+	if err := dsClient.Get(ctx, k, &i); err != nil {
+		return Invitation{}, fmt.Errorf("error getting invite %v: %v", k, err)
+	}
+	inv := i.Convert()
+	return inv, nil
+}
+
 func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
 	q := datastore.NewQuery("Invitation").FilterField("d", ">=", cutoff)
 	var ils []invLoader
@@ -82,23 +111,9 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 	}
 
 	var invs []Invitation
-	for n, k := range ks {
+	for n := range ks {
 		il := ils[n]
-		i := Invitation{
-			Key: k,
-			Date: il.Date,
-			Time: il.Time,
-			OwnerKey: il.OwnerKey,
-			Location: il.Location,
-			Notes: il.Notes,
-		}
-		if p, ok := il.Priority.(string); ok {
-			i.Priority = PriorityFromText(p)
-		} else if p, ok := il.Priority.(int64); ok {
-			i.Priority = Priority(p)
-		} else {
-			return nil, fmt.Errorf("Unknown value in priority: %v (%T)", il.Priority, il.Priority)
-		}
+		i := il.Convert()
 		if err := i.Load(ctx); err != nil {
 			return nil, fmt.Errorf("Error filling invite: %v", err)
 		}

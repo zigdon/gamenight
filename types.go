@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -63,7 +64,7 @@ type User struct {
 	Color           string         `datastore:"c"`
 }
 
-func (u *User) Email() string {
+func (u User) Email() string {
 	if strings.Contains(u.ID.String(), ",") {
 		return strings.Split(u.ID.String(), ",")[1]
 	} else {
@@ -81,14 +82,23 @@ type Gamenight struct {
 	Time     time.Time      `datastore:"t"`
 	Location string         `datastore:"l"`
 	Notes    string         `datastore:"n"`
-	Owner    *User
-	Invite   *Invitation
+	Owner    User
+	Invite   Invitation
 
-	invite   *datastore.Key `datastore:"a"`
-	owner    *datastore.Key `datastore:"o"`
+	InviteKey   *datastore.Key `datastore:"a"`
+	OwnerKey    *datastore.Key `datastore:"o"`
 }
 
-func (g Gamenight) Delete(ctx context.Context) error {
+func (g Gamenight) GetOwner() User {
+	if g.OwnerKey != nil {
+		return g.Owner
+	}
+	return User{
+		Name: "unknown",
+	}
+}
+
+func (g *Gamenight) Delete(ctx context.Context) error {
 	if g.EventID != "" {
 		if err := g.RemoveEvent(ctx); err != nil {
 			return fmt.Errorf("Error removing event %s: %v", g.EventID, err)
@@ -98,20 +108,28 @@ func (g Gamenight) Delete(ctx context.Context) error {
 	return dsClient.Delete(ctx, g.ID)
 }
 
-func (g Gamenight) CreateEvent(ctx context.Context) (string, error) {
+func (g *Gamenight) CreateEvent(ctx context.Context) (string, error) {
 	return "Not implemented", fmt.Errorf("Not implemented")
 }
 
-func (g Gamenight) RemoveEvent(ctx context.Context) error {
+func (g *Gamenight) RemoveEvent(ctx context.Context) error {
 	return fmt.Errorf("Not implemented")
 }
 
-func (g Gamenight) Load(ctx context.Context) error {
-	if err := dsClient.Get(ctx, g.owner, &g.Owner); err != nil {
-		return fmt.Errorf("error getting owner %v for %v: %v", g.owner, g.ID, err)
+func (g *Gamenight) Load(ctx context.Context) error {
+	var o User
+	var err error
+	if g.OwnerKey != nil {
+		if err = dsClient.Get(ctx, g.OwnerKey, &o); err != nil {
+			log.Printf("error getting owner %v for %v: %v", g.OwnerKey, g.ID, err)
+		}
 	}
-	if err := dsClient.Get(ctx, g.invite, &g.Invite); err != nil {
-		return fmt.Errorf("error getting invite %v for %v: %v", g.invite, g.ID, err)
+	g.Owner = o
+	if g.InviteKey != nil {
+		g.Invite, err = getInvite(ctx, g.InviteKey)
+		if err != nil {
+			log.Printf("error getting invite %v for %v: %v", g.InviteKey, g.ID, err)
+		}
 	}
 	return nil
 }
@@ -121,10 +139,7 @@ func (g Gamenight) When() time.Time {
 }
 
 func (g Gamenight) String() string {
-	if g.Owner == nil {
-		return fmt.Sprintf("%s: N/A", g.When())
-	}
-	return fmt.Sprintf("%s: %s@%s - %s", g.When(), g.Owner.Name, g.Location, g.Status)
+	return fmt.Sprintf("%s: %s@%s - %s", g.When(), g.GetOwner().Name, g.Location, g.Status)
 }
 
 type Invitation struct {
@@ -134,12 +149,21 @@ type Invitation struct {
 	Location string         `datastore:"l"`
 	Notes    string         `datastore:"n"`
 	Priority Priority       `datastore:"p"`
-	Owner    *User
+	Owner    User
 
 	OwnerKey    *datastore.Key `datastore:"o"`
 }
 
-func (i *Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
+func (i Invitation) GetOwner() User {
+	if i.OwnerKey != nil {
+		return i.Owner
+	}
+	return User{
+		Name: "unknown",
+	}
+}
+
+func (i Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
 	q := datastore.NewQuery("Gamenight").
 	    FilterField("a", "=", i.Key)
 	var gns []Gamenight
@@ -159,11 +183,11 @@ func (i *Invitation) Load(ctx context.Context) error {
 	if err := dsClient.Get(ctx, i.OwnerKey, &owner); err != nil {
 		return fmt.Errorf("error getting owner %v for %v: %v", i.OwnerKey, i.Key, err)
 	}
-	i.Owner = &owner
+	i.Owner = owner
 	return nil
 }
 
-func (i *Invitation) DateText() string {
+func (i Invitation) DateText() string {
 	suf := "th"
 	switch i.Date.Day() {
 		case 1: suf = "st"
@@ -173,15 +197,15 @@ func (i *Invitation) DateText() string {
 	return fmt.Sprintf(i.When().Format("Monday, Jan 2%s, 2006 at 3:04 pm"), suf)
 }
 
-func (i *Invitation) IsOwner(u User) bool {
+func (i Invitation) IsOwner(u User) bool {
 	return i.OwnerKey.Equal(u.ID)
 }
 
-func (i *Invitation) When() time.Time {
+func (i Invitation) When() time.Time {
 	return dateTime(i.Date, i.Time)
 }
 
-func (i *Invitation) PriorityText() string {
+func (i Invitation) PriorityText() string {
 	switch i.Priority {
 	case PriorityCan:
 		return "Can"
@@ -194,10 +218,10 @@ func (i *Invitation) PriorityText() string {
 	}
 }
 
-func (i *Invitation) String() string {
+func (i Invitation) String() string {
 	return fmt.Sprintf(
 		"%s: %s @ %s (%s): %s",
-		i.When(), i.Owner.Name, i.Location, i.PriorityText(), i.Notes)
+		i.When(), i.GetOwner().Name, i.Location, i.PriorityText(), i.Notes)
 }
 
 

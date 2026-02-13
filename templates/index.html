@@ -6,7 +6,7 @@
         <meta property="og:title" content="Is there a game night this week?" />
         {{ with .Current }}
             {{ if eq .Status "Yes" }}
-            <meta property="og:description" content="Yes! {{ .Location }} - {{ .When }}{{ if ne .Notes "" }} - {{ .Notes }}{{ end }}" />
+            <meta property="og:description" content="Yes! {{ .Location }} - {{ .When.Format "Monday, 02/03 at 3:04pm" }}{{ if ne .Notes "" }} - {{ .Notes }}{{ end }}" />
             {{ else }}
                 <meta property="og:description" content="{{ .Status }}" />
             {{ end }}
@@ -18,8 +18,8 @@
                 <div class="answer">{{ .Status }}.</div>
                 {{ if eq .Status "Yes" }}
                 <div class="where">
-                    {{ .Location }}
-                    {{ .When }}
+                    {{ .Location }},
+                    {{ .When.Format "Monday, 02/03 at 3:04pm" }}
                     {{ if ne .Notes "" }}<br />{{ .Notes }}{{ end }}
                 </div>
                 {{ end }}
