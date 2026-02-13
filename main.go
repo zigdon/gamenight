@@ -122,7 +122,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		out("%20d | %s | %s", gn.ID.ID, gn.When(), id)
 	}
 
-	invs, err := getAllInvitations(ctx, time.Now().In(tz()))
+	invs, err := getAllInvitations(ctx, time.Now(), false)
 	if err != nil {
 		out("inv query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -182,84 +182,63 @@ func mkDefault() Gamenight {
 	}
 }
 
+type Future struct {
+	Type string
+	When time.Time
+	Location string
+	Owner string
+}
+
+type IndexData struct {
+	Current Gamenight
+	Future []Future
+	Updated time.Time
+	CalendarID string
+}
+
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	var sched Gamenight
-	var gns []Gamenight
 	now := time.Now().In(tz())
+	// Sunday 00:00
+	sun := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz()).AddDate(0,0,int(7-now.Weekday()))
 	found := make(map[string]bool)
-	schQ := datastore.NewQuery("Gamenight").
+	it := dsClient.Run(ctx, datastore.NewQuery("Gamenight").
 		FilterField("s", "=", "Yes").
-		FilterField("d", ">", now.AddDate(0,0,-2)).
-		Order("d")
+		FilterField("d", ">", now.AddDate(0 ,0 ,-1)).
+		FilterField("d", "<", sun).
+		Order("d"))
 
-	_, err := dsClient.GetAll(ctx, schQ, &gns)
-	if err != nil {
-		log.Printf("sched query err: %v", err)
+	// The first result is the next scheduled gamenight.
+	k, err := it.Next(&sched)
+	if err == iterator.Done {
+		sched = mkDefault()
+	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	if (len(gns) == 0) {
-		sched = mkDefault()
 	} else {
-		sched = gns[0]
 		sched.Date = sched.Date.In(tz())
 		sched.Time = sched.Time.In(tz())
 		if err := sched.Load(ctx); err != nil {
-			log.Printf("Error loading %s: %v", sched.ID, err)
+			log.Printf("Error loading %s: %v", k, err)
 		}
 		found[fmt.Sprintf("%s@%s", sched.GetOwner().Name, sched.When())] = true
 	}
 
-	// Midnight on this saturday.
-	sat := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0,0,7-now.Day())
-	gnQ := datastore.NewQuery("Gamenight").
-		FilterField("d", "<", sat).
-		FilterField("d", ">=", now).
-		Order("d")
-
-	gns = []Gamenight{}
-	_, err = dsClient.GetAll(ctx, gnQ, &gns)
-	if err != nil {
-		log.Printf("gns query err: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	var invs []Invitation
-	invQ := datastore.NewQuery("Invitation").
-	    FilterField("d", ">", now).
-	    FilterField("d", "<", now.AddDate(0, 0, 7)).
-		Order("d")
-
-	_, err = dsClient.GetAll(ctx, invQ, &invs)
-	if err != nil {
-		log.Printf("query err: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	type Future struct {
-		Type string
-		When time.Time
-		Location string
-		Owner string
-	}
-
-	type IndexData struct {
-		Current Gamenight
-		Future []Future
-		Updated time.Time
-		CalendarID string
-	}
-
+	// Any additional results should be listed below.
 	var days []Future
-	for _, gn := range gns {
+	for {
+		var gn Gamenight
+		_, err := it.Next(&gn)
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		if err = gn.Load(ctx); err != nil {
 			log.Printf("Error filling gn: %v", err)
-		}
-		if (gn.ID.Equal(sched.ID)) {
-			continue
 		}
 		days = append(days, Future{
 			Type: "gamenight",
@@ -268,6 +247,11 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			Owner: gn.GetOwner().Name,
 		})
 		found[fmt.Sprintf("%s@%s", gn.GetOwner().Name, gn.When())] = true
+	}
+
+    invs, err := getAllInvitations(ctx, now, true)
+	if err != nil {
+		log.Printf("Error getting invitations: %v", err)
 	}
 	for _, inv := range invs {
 		if err = inv.Load(ctx); err != nil {

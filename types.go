@@ -141,7 +141,7 @@ func (g *Gamenight) Load(ctx context.Context) error {
 }
 
 func (g Gamenight) When() time.Time {
-	return dateTime(g.Date, g.Time)
+	return dateTime(g.Date.In(tz()), g.Time.In(tz()))
 }
 
 func (g Gamenight) String() string {

@@ -78,7 +78,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 	// 1. Examine all pending invites.
 	now := time.Now().In(tz())
 
-	invs, err := getAllInvitations(ctx, now)
+	invs, err := getAllInvitations(ctx, now, true)
 	if err != nil {
 		out("Failed to get invitations: %v", err)
 		return false, err
@@ -94,8 +94,8 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 	if nextGN, err := getNextGamenight(ctx); err != nil {
 		out("Couldn't find next gamenight: %v", err)
 	} else {
-		if nextGN.Date.Before(next) {
-			out("Next gamenight is before saturday: %s", nextGN.Date.Format("Monday, 2006-01-02"))
+		if nextGN.Date.In(tz()).Before(next) {
+			out("Next gamenight is before the cuttoff (%s): %s", next.Format("2006-01-02 15:04"), nextGN.String())
 			next = nextGN.Date
 		}
 	}
@@ -104,7 +104,12 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 	byDate := make(map[string][]Invitation)
 	earliest := ""
 	for _, i := range invs {
-		if i.When().After(next) {
+		// If it is already scheduled, no need to schedule it again.
+		if i.Scheduled != nil {
+			out("Skipping %s, as it is already scheduled", i.String())
+			continue
+		}
+		if !i.When().Before(next) {
 			out("Discarding %s, as it is after %s", i.String(), next)
 			continue
 		}

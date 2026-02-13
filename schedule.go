@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/iterator"
 )
 
 type ScheduleDay struct {
@@ -36,30 +37,24 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/schedule.html"))
 
 	// List all the currently scheduled gamenights
-	now := time.Now().In(tz())
-	q := datastore.NewQuery("Gamenight").FilterField("d", ">=", now)
-	var gns []Gamenight
-	ks, err := dsClient.GetAll(ctx, q, &gns)
-	if err != nil {
-		log.Printf("Error getting gamenights: %v", err)
-		data.Base.Error = "Database error"
-		tmpl.ExecuteTemplate(w, "schedule.html", data)
-		return
-	}
-	log.Printf("Loaded %d gamenights", len(ks))
-
-	invs, err := getAllInvitations(ctx, now)
-	if err != nil {
-		log.Printf("Error getting gamenights: %v", err)
-		data.Base.Error = "Database error"
-		tmpl.ExecuteTemplate(w, "schedule.html", data)
-		return
-	}
-	log.Printf("Loaded %d invitations", len(invs))
-
 	days := make(map[string]ScheduleDay)
+	now := time.Now().In(tz())
+	it := dsClient.Run(ctx, 
+   	    datastore.NewQuery("Gamenight").
+		FilterField("d", ">=", now))
+
 	var dayList []string
-	for _, gn := range gns {
+	for {
+		var gn Gamenight
+		_, err := it.Next(&gn)
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			log.Printf("Error getting gamenight: %v", err)
+			data.Base.Error = "Database error"
+			tmpl.ExecuteTemplate(w, "schedule.html", data)
+			return
+		}
 		if err = gn.Load(ctx); err != nil {
 			log.Printf("Error filling gamenight: %v", err)
 		}
@@ -72,6 +67,16 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 			dayList = append(dayList, date)
 		}
 	}
+
+	// Get all the pending invitations.
+	invs, err := getAllInvitations(ctx, now, false)
+	if err != nil {
+		log.Printf("Error getting gamenights: %v", err)
+		data.Base.Error = "Database error"
+		tmpl.ExecuteTemplate(w, "schedule.html", data)
+		return
+	}
+	log.Printf("Loaded %d invitations", len(invs))
 	for _, inv := range invs {
 		if err = inv.Load(ctx); err != nil {
 			log.Printf("Error filling invitation: %v", err)

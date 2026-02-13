@@ -185,7 +185,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
     ctx := r.Context()
-	invs, err := getAllInvitations(ctx, time.Now().In(tz()))
+	invs, err := getAllInvitations(ctx, time.Now(), false)
 	if err != nil {
 		log.Printf("query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

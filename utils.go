@@ -95,8 +95,11 @@ func getInvite(ctx context.Context, k *datastore.Key) (Invitation, error) {
 	return inv, nil
 }
 
-func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
-	q := datastore.NewQuery("Invitation").FilterField("d", ">=", cutoff)
+func getAllInvitations(ctx context.Context, starting time.Time, week bool) ([]Invitation, error) {
+	q := datastore.NewQuery("Invitation").FilterField("d", ">=", starting)
+	if week {
+		q = q.FilterField("d", "<=", time.Now().AddDate(0, 0, 7))
+	}
 	it := dsClient.Run(ctx, q)
 
 	var invs []Invitation
@@ -122,8 +125,7 @@ func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, err
 func getNextGamenight(ctx context.Context) (*Gamenight, error) {
 	now := time.Now().In(tz())
 	q := datastore.NewQuery("Gamenight").
-		FilterField("d", ">=",
-		time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())).
+		FilterField("d", ">=", now.AddDate(0, 0, -1)).
 		Order("d").
 		Limit(1)
 	var gns []Gamenight
