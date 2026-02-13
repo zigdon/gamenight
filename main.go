@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/iterator"
 )
 
 var (
@@ -95,16 +96,22 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 	out("<input name=\"delete\" type=\"submit\"/></form><hr/>")
 	out("<pre>")
 	out("Gamenights:")
-	var gns []Gamenight
-	_, err = dsClient.GetAll(ctx, datastore.NewQuery("Gamenight").FilterField("d", ">", time.Now()).Order("-d"), &gns)
-	if err != nil {
-		log.Printf("gn query err: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	for _, gn := range gns {
+	it := dsClient.Run(ctx,
+	    datastore.NewQuery("Gamenight").
+		FilterField("d", ">", time.Now()).
+		Order("-d"))
+	for {
+		var gn Gamenight
+		k, err := it.Next(&gn)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			out("iterator error: %v", err)
+			continue
+		}
 		if err := gn.Load(ctx); err != nil {
-			log.Printf("error loading gn %v: %v", gn.ID, err)
+			log.Printf("error loading gn %v: %v", k, err)
 		}
 		var id string
 		if gn.InviteKey == nil {
@@ -140,18 +147,19 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		out("%20d | %s | %15s | %20d | %s: %s", i.Key.ID, i.When(), i.GetOwner().Name, gnid, i.Location, i.Notes)
 	}
 
-	userQ := datastore.NewQuery("User")
-
-	var users []User
-	_, err = dsClient.GetAll(ctx, userQ, &users)
-	if err != nil {
-		out("user query err: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	it = dsClient.Run(ctx, datastore.NewQuery("User"))
 	out("\nUsers:")
-	for _, i := range users {
-		out("%#v: %#v", i.ID, i)
+	for {
+		var u User
+		k, err := it.Next(&u)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			out("error getting user: %v", err)
+			continue
+		}
+		out("%30s | %20s | %s", k.Name, u.Name, u.DefaultLocation)
 	}
 }
 
