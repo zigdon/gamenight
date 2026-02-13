@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/iterator"
 )
 
 func tz() *time.Location {
@@ -49,14 +50,14 @@ func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
 	email := r.Header.Get("X-Appengine-User-Email")
 	if email == "" {
 		http.Redirect(w, r, "/_ah/login?continue=/schedule", http.StatusFound)
-		return nil, fmt.Errorf("Not logged in: %w", http.StatusTemporaryRedirect)
+		return nil, fmt.Errorf("Not logged in")
 	}
 
     user, err := getUser(ctx, email)
     if err != nil {
         log.Printf("Error fetching user %s: %v", email, err)
         http.Error(w, "Error fetching user", http.StatusInternalServerError)
-		return nil, fmt.Errorf("Error fetching user: %w", http.StatusInternalServerError)
+		return nil, fmt.Errorf("Error fetching user")
     }
 
 	return user, nil
@@ -96,15 +97,18 @@ func getInvite(ctx context.Context, k *datastore.Key) (Invitation, error) {
 
 func getAllInvitations(ctx context.Context, cutoff time.Time) ([]Invitation, error) {
 	q := datastore.NewQuery("Invitation").FilterField("d", ">=", cutoff)
-	var ils []invLoader
-	ks, err := dsClient.GetAll(ctx, q, &ils)
-	if err != nil {
-		return nil, fmt.Errorf("error loading invitations: %v", err)
-	}
+	it := dsClient.Run(ctx, q)
 
 	var invs []Invitation
-	for n := range ks {
-		il := ils[n]
+	for {
+		var il invLoader
+		k, err := it.Next(&il)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, fmt.Errorf("Error reading %v: %v", k, err)
+		}
 		i := il.Convert()
 		if err := i.Load(ctx); err != nil {
 			return nil, fmt.Errorf("Error filling invite: %v", err)
