@@ -158,6 +158,55 @@ type Invitation struct {
 	Owner    User
 
 	OwnerKey    *datastore.Key `datastore:"o"`
+	Scheduled *Gamenight
+}
+
+func (i *Invitation) Schedule(ctx context.Context) error {
+	out := log.Printf
+	now := time.Now().In(tz())
+
+	// TODO: If there's a tie in date/priority, prefer the person who hasn't
+	// hosted recently. For now, let's assume that's not a problem.
+
+	// If the invite is not for Saturday, schedule it.
+	// If it is for Saturday, and it's high priority, or today is at least Tuesday, schedule it.
+	if i.Date.Weekday() == time.Saturday {
+		if i.Priority == PriorityCan && now.Weekday() < time.Tuesday {
+			out("Today is %s, not scheduling 'Can' for Saturday yet", now.Weekday())
+			return nil
+		}
+	}
+
+	out("Scheduling %s", i.String())
+
+	gn := &Gamenight{
+		ID: datastore.IncompleteKey("Gamenight", nil),
+		Status: "Yes",
+		LastUpdate: now,
+		Date: i.When(),
+		Time: i.When(),  // Redundant and obsolete, but keep filling it for now.
+		Location: i.Location,
+		Notes: i.Notes,
+		OwnerKey: i.OwnerKey,
+		InviteKey: i.Key,
+	}
+
+	nk, err := dsClient.Put(ctx, gn.ID, gn)
+	if err != nil {
+		return fmt.Errorf("Failed to save gamenight: %v", err)
+	}
+
+	i.Scheduled = gn
+	out("Created entry: %v", nk)
+
+	if eid, err := gn.CreateEvent(ctx); err != nil {
+		out("Failed to create new event: %v", err)
+	} else {
+		out("Created event: %v", eid)
+	}
+
+	// TODO: send out notifications to those who asked.
+	return nil
 }
 
 func (i Invitation) GetOwner() User {
@@ -170,7 +219,10 @@ func (i Invitation) GetOwner() User {
 }
 
 func (i Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
-	q := datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key)
+	if i.Scheduled != nil {
+		return i.Scheduled, nil
+	}
+	q := datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key).Limit(1)
 	var gns []Gamenight
 	ks, err := dsClient.GetAll(ctx, q, &gns)
 	if err != nil {
@@ -189,6 +241,8 @@ func (i *Invitation) Load(ctx context.Context) error {
 		return fmt.Errorf("error getting owner %v for %v: %v", i.OwnerKey, i.Key, err)
 	}
 	i.Owner = owner
+	// Preload the scheduled gamenight, if any, YOLO.
+	i.Scheduled, _ = i.GetGamenight(ctx)
 	// Convert the time into localtime, because timezone are the WORST.
 	i.Date = i.Date.In(tz())
 	i.Time = i.Time.In(tz())

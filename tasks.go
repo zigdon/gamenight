@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"slices"
 	"time"
-
-	"cloud.google.com/go/datastore"
 )
 
 // Check if the request is coming from cron, or from an admin. Returns an
@@ -37,6 +35,7 @@ func cronOrAdmin(ctx context.Context, r *http.Request) (bool, error) {
 	return true, nil
 }
 
+
 func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	// Whatever happens, redirect back to the schedule page.
 	defer func() {
@@ -45,16 +44,22 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 
 	// Check auth.
 	ctx := r.Context()
-	out := func(t string, args ...any) {
-		log.Printf(t, args...)
-	}
 	admin, err := cronOrAdmin(ctx, r)
 	if err != nil {
         http.Error(w, "Unauthorized", http.StatusForbidden)
 		return
 	}
 
-	if admin {
+	if _, err := maybeSchedule(ctx, w, admin); err != nil {
+		log.Printf("Error scheduling gamenight: %v", err)
+	}
+}
+
+func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool, error) {
+	out := func(t string, args ...any) {
+		log.Printf(t, args...)
+	}
+	if debug {
 		w.Header().Set("Content-Type", "text/plain")
 		out = func(t string, args ...any) {
 			log.Printf(t, args...)
@@ -67,9 +72,7 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	// 2. Discard any invites that are after a scheduled gamenight.
 	// 3. Discard any for a date later than the nearest invite.
 	// 4. Sort invites by priority.
-	// 5. If the top invite is not for Saturday, schedule it.
-	// 6. If it is for Saturday, and it's high priority, or today is at least Tuesday, schedule it.
-	// 7. Otherwise, do nothing.
+	// 5. Attempt to schedule the top invite.
 
 	// Execution:
 	// 1. Examine all pending invites.
@@ -78,11 +81,11 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	invs, err := getAllInvitations(ctx, now)
 	if err != nil {
 		out("Failed to get invitations: %v", err)
-		return
+		return false, err
 	}
 	if len(invs) == 0 {
 		out("No pending invitations found")
-		return
+		return false, nil
 	}
 
 	// Up to midnight of next saturday, or next GN date, whichever is first.
@@ -115,7 +118,7 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	// No invites to consider, give up.
 	if earliest == "" {
 		out("No invitations found before %s, aborting scheduling", next)
-		return
+		return false, nil
 	}
 
 	// 3. Discard any for a date later than the nearest invite.
@@ -130,45 +133,10 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 		i.Load(ctx)
 		out("%d.  %s\n", n, i.String())
 	}
-	i := invs[0]
 
-	// TODO: If there's a tie in date/priority, prefer the person who hasn't
-	// hosted recently. For now, let's assume that's not a problem.
-
-	// 5. If the top invite is not for Saturday, schedule it.
-	// 6. If it is for Saturday, and it's high priority, or today is at least Tuesday, schedule it.
-	if i.Date.Weekday() == time.Saturday {
-		if i.Priority == PriorityCan && now.Weekday() < time.Tuesday {
-			out("Today is %s, not scheduling 'Can' for Saturday yet", now.Weekday())
-			return
-		}
+	// 5. Attempt to schedule the top invite.
+	if err := invs[0].Schedule(ctx); err != nil {
+		return false, fmt.Errorf("couldn't schedule: %v", err)
 	}
-
-	out("Scheduling %s", i.String())
-
-	gn := &Gamenight{
-		ID: datastore.IncompleteKey("Gamenight", nil),
-		Status: "Yes",
-		LastUpdate: now,
-		Date: i.When(),
-		Time: i.When(),  // Redundant and obsolete, but keep filling it for now.
-		Location: i.Location,
-		Notes: i.Notes,
-		OwnerKey: i.OwnerKey,
-		InviteKey: i.Key,
-	}
-
-	nk, err := dsClient.Put(ctx, gn.ID, gn)
-	out("Created entry: %v", nk)
-
-	eid, err := gn.CreateEvent(ctx)
-	if err != nil {
-		out("Failed to create new event: %v", err)
-		return
-	}
-
-	out("Created event: %v", eid)
-
-	// TODO: send out notifications to those who asked.
-
+	return invs[0].Scheduled != nil, nil
 }

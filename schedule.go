@@ -22,20 +22,13 @@ type ScheduleData struct {
 }
 
 func handleSchedule(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-	email := r.Header.Get("X-Appengine-User-Email")
-	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue=/schedule", http.StatusFound)
+	user, err := loggedIn(w, r)
+	if err != nil {
+		log.Print(err.Error())
 		return
 	}
 
-    // Attempt to get the user from datastore
-    user, err := getUser(ctx, email)
-    if err != nil {
-        log.Printf("Error fetching user %s: %v", email, err)
-        http.Error(w, "Error fetching user", http.StatusInternalServerError)
-        return
-    }
+    ctx := r.Context()
 
 	data := ScheduleData{
 		Base: BaseTemplate{Tab: "schedule", User: user},

@@ -24,6 +24,7 @@ type InviteData struct {
 	Priority    string
 	Checks      map[string]string
 	ParsedTime  time.Time
+	Scheduled   bool
 }
 
 func createInvite(r *http.Request, data *InviteData, user *User) error {
@@ -88,9 +89,15 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		return fmt.Errorf("failed to parse priority: %v", priorityStr)
 	}
 
+	if parsedTime.Before(time.Now()) {
+		data.Base.Error = "Can't create an invitation in the past!"
+		return fmt.Errorf("refused to create invitation in the past: %s", parsedTime)
+	}
+
 	// Save to Datastore
 	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
-	nk, err := dsClient.Put(r.Context(), invite.Key, &invite)
+	ctx := r.Context()
+	nk, err := dsClient.Put(ctx, invite.Key, &invite)
 	if err != nil {
 		data.Base.Error = "Error saving invitation!"
 		return fmt.Errorf("failed to save invite: %v", err)
@@ -110,10 +117,6 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		suf = "rd"
 	}
 
-	if parsedTime.Before(time.Now()) {
-		data.Base.Error = "Can't create an invitation in the past!"
-		return fmt.Errorf("refused to create invitation in the past: %s", parsedTime)
-	}
 	// Attempt to warn about odd invitations.
 	// Expected: start 5pm-10pm, Saturday, in the future, within 30 days.
 	checks := make(map[string]string)
@@ -129,7 +132,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	data.Checks = checks
 	data.Base.Msg = fmt.Sprintf("Invitation created for %s%s!",
 		parsedTime.Format("Monday, January 2"), suf)
-
+	
 	return nil
 }
 
@@ -175,21 +178,13 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 }
 
 func handleInvite(w http.ResponseWriter, r *http.Request) {
-    ctx := r.Context()
-	email := r.Header.Get("X-Appengine-User-Email")
-	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue=/invite", http.StatusFound)
+	user, err := loggedIn(w, r)
+	if err != nil {
+		log.Print(err.Error())
 		return
 	}
 
-    // Attempt to get the user from datastore
-    user, err := getUser(ctx, email)
-    if err != nil {
-        log.Printf("Error fetching user %s: %v", email, err)
-        http.Error(w, "Error fetching user", http.StatusInternalServerError)
-        return
-    }
-
+    ctx := r.Context()
 	invs, err := getAllInvitations(ctx, time.Now().In(tz()))
 	if err != nil {
 		log.Printf("query err: %v", err)
@@ -214,6 +209,9 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Checks[k] = v
 	}
+	if r.FormValue("sched") != "" {
+		data.Scheduled = true
+	}
 
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/invite.html"))
 	if r.Method == http.MethodPost {
@@ -231,6 +229,12 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 			err = withdrawInvite(r, data, user)
 		} else {
 			err = createInvite(r, data, user)
+			// Try and immediately schedule, if appropriate.
+			if added, err := maybeSchedule(ctx, w, false); err != nil {
+				log.Printf("Couldn't run instant-schedule: %v", err)
+			} else if added {
+				data.Checks["sched"] = "yes"
+			}
 		}
 		if err != nil {
 			log.Printf("Error processing POST: %v", err)

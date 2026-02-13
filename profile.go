@@ -87,18 +87,11 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 }
 
 func handleProfile(w http.ResponseWriter, r *http.Request) {
-	email := r.Header.Get("X-Appengine-User-Email")
-	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue=/profile", http.StatusFound)
+	user, err := loggedIn(w, r)
+	if err != nil {
+		log.Print(err.Error())
 		return
 	}
-
-	user, err := getUser(r.Context(), email)
-    if err != nil {
-        log.Printf("Error fetching user %s: %v", email, err)
-        http.Error(w, "Error fetching user", http.StatusInternalServerError)
-        return
-    }
 
 	data := &ProfileData{
 		Profile: user,

@@ -55,6 +55,16 @@ func main() {
 }
 
 func handleDebug(w http.ResponseWriter, r *http.Request) {
+	user, err := loggedIn(w, r)
+	if err != nil {
+		log.Print(err.Error())
+		return
+	}
+	if !user.Superuser {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+
 	ctx := r.Context()
 	out := func(t string, args ...any) {
 		fmt.Fprintf(w, t+"\n", args...)
@@ -86,7 +96,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 	out("<pre>")
 	out("Gamenights:")
 	var gns []Gamenight
-	_, err := dsClient.GetAll(ctx, datastore.NewQuery("Gamenight").FilterField("d", ">", time.Now()).Order("-d"), &gns)
+	_, err = dsClient.GetAll(ctx, datastore.NewQuery("Gamenight").FilterField("d", ">", time.Now()).Order("-d"), &gns)
 	if err != nil {
 		log.Printf("gn query err: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"log"
 	"strings"
 	"time"
@@ -41,6 +42,24 @@ func getAllUsers(ctx context.Context) ([]User, error) {
 		return nil, fmt.Errorf("Error querying users: %v", err)
 	}
 	return users, nil
+}
+
+func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
+    ctx := r.Context()
+	email := r.Header.Get("X-Appengine-User-Email")
+	if email == "" {
+		http.Redirect(w, r, "/_ah/login?continue=/schedule", http.StatusFound)
+		return nil, fmt.Errorf("Not logged in: %w", http.StatusTemporaryRedirect)
+	}
+
+    user, err := getUser(ctx, email)
+    if err != nil {
+        log.Printf("Error fetching user %s: %v", email, err)
+        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+		return nil, fmt.Errorf("Error fetching user: %w", http.StatusInternalServerError)
+    }
+
+	return user, nil
 }
 
 func getUser(ctx context.Context, email string) (*User, error) {

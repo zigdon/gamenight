@@ -10,6 +10,11 @@
     Is that right?
 </div>
 {{ end }}
+{{ if .Scheduled }}
+<div class="container-fluid alert-success">
+    Your gamenight has been immeidately scheduled.
+</div>
+{{ end }}
 <form method="post" action="/invite">
     <div class="row-fluid">
         <div class="span6">
@@ -41,15 +46,15 @@
                 <legend>Current invitations</legend>
                 <ul>
                     {{ range $invite := .Invitations }}
-                        <li>
+                    <li{{ if $invite.Scheduled }} class="scheduled"{{ end }}>
                             {{ if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
                               <button type="submit" class="close" name="withdraw" value="{{ $invite.Key.ID }}">x</button>
                             {{ end }}
                             {{ if $.Base.User.Superuser }}
                                 {{ $invite.Owner.Name }} -
                             {{ end }}
-                            {{ $invite.When.Format "2006-01-02 3:04pm" }} @
-                            {{ $invite.Location }} ({{ $invite.PriorityText }}).
+                            {{ $invite.When.Format "2006-01-02 3:04pm" }}
+                            @ {{ $invite.Location }} ({{ $invite.PriorityText }}).
                             {{ if $invite.Notes }}
                                 <br /><small>{{ $invite.Notes }}</small>
                             {{ end }}
