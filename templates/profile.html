@@ -6,7 +6,7 @@
             <fieldset>
                 <legend>Profile{{ if .Base.User.Superuser }}: {{ .Profile.ID.Name }}{{ end }}</legend>
                 <table>
-                    <tr><th>Email"</th><td>{{ .Profile.ID.Name }}</td></tr>
+                    <tr><th>Email</th><td>{{ .Profile.ID.Name }}</td></tr>
                     <tr><th><label for="name">Name</label></th>
                         <td><input id="name" name="name" type="text" value="{{ .Profile.Name }}" /></td></tr>
                     <tr><th><label for="location">Default location</label></th>

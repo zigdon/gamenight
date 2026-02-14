@@ -26,10 +26,10 @@
                                 </ul>
                                 <ul class="nav pull-right">
                                     {{ if .Base.User.Superuser }}
-                                        <li class="dropdown">
-                                             <a data-toggle="dropdown" class="dropdown-toggle" href="#">Admin<strong class="caret"></strong></a>
+                                        <li class="dropdown{{ if eq .Base.Tab "admin" }} active{{ end }}">
+                                            <a data-toggle="dropdown" class="dropdown-toggle" href="#">Admin<strong class="caret"></strong></a>
                                             <ul class="dropdown-menu">
-                                                <li><a href="/config">Configuration</a></li>
+                                                <li{{ if eq .Base.Subtab "config" }} class="active"{{ end }}><a href="/config">Configuration</a></li>
                                                 <li><a href="/tasks/schedule">Schedule</a></li>
                                                 <li><a href="/tasks/nag?email=first">Send first nag email</a></li>
                                                 <li><a href="/tasks/nag?email=second&status=Maybe">Send second nag email</a></li>
@@ -42,7 +42,7 @@
                                     <li class="dropdown{{ if eq .Base.Tab "profile" }} active{{ end }}">
                                          <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .Base.User.Name }}<strong class="caret"></strong></a>
                                         <ul class="dropdown-menu">
-                                            <li>
+                                            <li {{ if eq .Base.Tab "profile" }}class="active"{{ end }}>
                                                 <a href="/profile">Profile{{ if .Base.User.Superuser }} and users{{ end }}</a>
                                             </li>
                                             <li>

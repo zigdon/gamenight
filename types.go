@@ -49,6 +49,7 @@ func (p Priority) Description() string {
 
 type BaseTemplate struct {
 	Tab string
+	Subtab string
 	Error string
 	Msg string
 	User *User

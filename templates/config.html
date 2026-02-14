@@ -1,5 +1,3 @@
-{{ template "base.html" }}
-{{ $tab := "admin" }}
 {{ define "Title" }}Edit Configuration{{ end }}
 {{ define "Content" }}
 <div class="row-fluid">
@@ -8,9 +6,9 @@
             {{ range $name, $val := .Config }}
                 <div class="control-group">
                     <label class="control-label" for="config_{{ $name }}">{{ $name }}
-                    {{ if .Flags.name }}
+                    {{ if eq (index $.Updated $name) "yes" }}
                         <span class="label label-success">Updated</span>
-                    {{ else if .Flags.name eq nil }}
+                    {{ else if eq (index $.Updated $name) "failed" }}
                         <span class="label label-danger">Failed</span>
                     {{ end }}</label>
                     <div class="controls">
@@ -20,15 +18,6 @@
                 </div>
             {{ end }}
             <div class="control-group">
-                <label class="control-label" for="new_entry">Add a new key</label>
-                <div class="controls">
-                    <input type="text" id="new_name" name="new_name"
-                           placeholder="Name"/>
-                    <input type="text" id="new_value" name="new_value"
-                           placeholder="Value"/>
-                </div>
-            </div>
-            <div class="control-group">
                 <div class="controls">
                      <button type="submit" class="btn">Save</button>
                 </div>
@@ -37,5 +26,5 @@
     </div>
 </div>
 {{ end }}
-{# vim: set ts=4 sts=4 sw=4 et: #}
-
+{{/* vim: set ts=4 sts=4 sw=4 et: */}}
+{{ template "base.html" . }}

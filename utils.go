@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"log"
+	"slices"
 	"strings"
 	"time"
 
@@ -225,3 +226,93 @@ func parseTimespec(timespec string) (time.Time, error) {
 	return parsedTime, err
 }
 
+func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool, error) {
+	out := func(t string, args ...any) {
+		log.Printf(t, args...)
+	}
+	if debug {
+		w.Header().Set("Content-Type", "text/plain")
+		out = func(t string, args ...any) {
+			log.Printf(t, args...)
+			fmt.Fprintf(w, t+"\n", args...)
+		}
+	}
+
+	// The plan:
+	// 1. Examine invites up to the next scheduled GN, or the next Saturday, whichever is first.
+	// 2. Discard any invites that are after a scheduled gamenight.
+	// 3. Discard any for a date later than the nearest invite.
+	// 4. Sort invites by priority.
+	// 5. Attempt to schedule the top invite.
+
+	// Execution:
+	// 1. Examine all pending invites.
+	now := time.Now().In(tz())
+
+	invs, err := getAllInvitations(ctx, now, true)
+	if err != nil {
+		out("Failed to get invitations: %v", err)
+		return false, err
+	}
+	if len(invs) == 0 {
+		out("No pending invitations found")
+		return false, nil
+	}
+
+	// Up to midnight of next saturday, or next GN date, whichever is first.
+	next := time.Date(now.Year(), now.Month(), now.Day(),
+	    0, 0, 0, 0, tz()).AddDate(0, 0, int(7-now.Weekday()))
+	if nextGN, err := getNextGamenight(ctx); err != nil {
+		out("Couldn't find next gamenight: %v", err)
+	} else {
+		if nextGN.Date.In(tz()).Before(next) {
+			out("Next gamenight is before the cuttoff (%s): %s", next.Format("2006-01-02 15:04"), nextGN.String())
+			next = nextGN.Date
+		}
+	}
+
+	// 2. Discard any invites that are after a scheduled gamenight.
+	byDate := make(map[string][]Invitation)
+	earliest := ""
+	for _, i := range invs {
+		// If it is already scheduled, no need to schedule it again.
+		if i.Scheduled != nil {
+			out("Skipping %s, as it is already scheduled", i.String())
+			continue
+		}
+		if !i.When().Before(next) {
+			out("Discarding %s, as it is after %s", i.String(), next)
+			continue
+		}
+		date := i.When().Format("2006-01-02")
+		byDate[date] = append(byDate[date], i)
+		if earliest == "" || date < earliest {
+			earliest = date
+		}
+	}
+
+	// No invites to consider, give up.
+	if earliest == "" {
+		out("No invitations found before %s, aborting scheduling", next)
+		return false, nil
+	}
+
+	// 3. Discard any for a date later than the nearest invite.
+	out("Found %d (of %d) invitations for %s:\n", len(byDate[earliest]), len(invs), earliest)
+	invs = byDate[earliest]
+
+	// 4. Sort invites by priority.
+	slices.SortStableFunc(invs, func(a, b Invitation) int {
+		return int(b.Priority - a.Priority)
+	})
+	for n, i := range invs {
+		i.Load(ctx)
+		out("%d.  %s\n", n, i.String())
+	}
+
+	// 5. Attempt to schedule the top invite.
+	if err := invs[0].Schedule(ctx); err != nil {
+		return false, fmt.Errorf("couldn't schedule: %v", err)
+	}
+	return invs[0].Scheduled != nil, nil
+}

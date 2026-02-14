@@ -41,6 +41,7 @@ func main() {
 	http.HandleFunc("/profile", handleProfile)
 	http.HandleFunc("/debug", handleDebug)
 	http.HandleFunc("/schedule", handleSchedule)
+	http.HandleFunc("/config", handleConfig)
 	//http.HandleFunc("/tasks/nag", nil)
 	//http.HandleFunc("/tasks/reset", nil)
 	http.HandleFunc("/tasks/schedule", handleTaskSchedule)
