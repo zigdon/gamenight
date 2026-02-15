@@ -66,9 +66,15 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		updated := false
+		var rmKeys []*datastore.Key
 		for k, v := range config {
 			nv := r.FormValue("config_"+v.Name)
-			if nv != v.Value {
+			if nv == "" {
+				log.Printf("Config[%s]: %q removed", v.Name, v.Value)
+				updated = true
+				rmKeys = append(rmKeys, k)
+				delete(config, k)
+			} else if nv != v.Value {
 				log.Printf("Config[%s]: %q -> %q", v.Name, v.Value, nv)
 				updated = true
 				config[k] = &Config{v.Name, nv}
@@ -112,6 +118,13 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Adding new key %s for %v", nk, newConfig)
 				data.Updated[newConfig.Name] = "failed"
 				config[nk] = newConfig
+			}
+			if len(rmKeys) > 0 {
+				if err := tx.DeleteMulti(rmKeys); err != nil {
+					data.Base.Error = fmt.Sprintf("Error deleting %d keys: %v", len(rmKeys), err)
+					return
+				}
+				data.Base.Msg = fmt.Sprintf("Removed %d keys", len(rmKeys))
 			}
 			if _, err = tx.PutMulti(keys, vals); err != nil {
 				data.Base.Error = fmt.Sprintf("Error updating values: %v", err)
