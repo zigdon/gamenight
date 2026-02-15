@@ -14,6 +14,10 @@
                                 {{- end }}:
                                 {{ .When.Format "01/02/2006 3:04pm"  }} @ {{ .Location }}
                                 {{ if .Notes }}<br/>{{ .Notes }}{{ end }}
+                                {{ if $.Base.User.Superuser }}
+                                <br/>EventID: <code>{{ .EventID }}</code>
+                                <pre>{{ printf "%#v" .EventDetails }}</pre>
+                                {{ end }}
                             </li>
                         {{ end }}{{ else }}
                             <li>None scheduled</li>

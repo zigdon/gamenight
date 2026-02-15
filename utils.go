@@ -284,6 +284,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 			out("Discarding %s, as it is after %s", i.String(), next)
 			continue
 		}
+		out("Found %s", i.String())
 		date := i.When().Format("2006-01-02")
 		byDate[date] = append(byDate[date], i)
 		if earliest == "" || date < earliest {

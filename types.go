@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/calendar/v3"
 )
 
 type Status int
@@ -88,6 +89,8 @@ type Gamenight struct {
 
 	InviteKey   *datastore.Key `datastore:"a"`
 	OwnerKey    *datastore.Key `datastore:"o"`
+
+	EventDetails *calendar.Event
 }
 
 func (g Gamenight) GetOwner() User {
@@ -112,12 +115,33 @@ func (g *Gamenight) Delete(ctx context.Context) error {
 	return dsClient.Delete(ctx, g.ID)
 }
 
-func (g *Gamenight) CreateEvent(ctx context.Context) (string, error) {
-	return "Not implemented", fmt.Errorf("Not implemented")
+func (g *Gamenight) CreateEvent(ctx context.Context) error {
+	eid, err := svc.Add(ctx, g.Date.In(tz()), g.Location, g.Notes, []User{})
+	if err != nil {
+		return err
+	}
+	g.EventID = eid
+	log.Printf("Created event: %s", eid)
+	if err := g.Save(ctx); err != nil {
+		return fmt.Errorf("Failed to update gamenight: %v", err)
+	}
+
+	return nil
 }
 
 func (g *Gamenight) RemoveEvent(ctx context.Context) error {
-	return fmt.Errorf("Not implemented")
+	if err := svc.Remove(ctx, g.EventID); err != nil {
+		return err
+	}
+	log.Printf("Removed event %q", g.EventID)
+	g.EventID = ""
+	return nil
+}
+
+func (g *Gamenight) Save(ctx context.Context) error {
+	m := datastore.NewUpdate(g.ID, g)
+	_, err := dsClient.Mutate(ctx, m)
+	return err
 }
 
 func (g *Gamenight) Load(ctx context.Context) error {
@@ -135,6 +159,13 @@ func (g *Gamenight) Load(ctx context.Context) error {
 			log.Printf("error getting invite %v for %v: %v", g.InviteKey, g.ID, err)
 		}
 	}
+	if g.EventID != "" {
+		g.EventDetails, err = svc.Get(ctx, g.EventID)
+		if err != nil {
+			log.Printf("Error getting event %q: %v", g.EventID, err)
+		}
+	}
+
 	// Convert the time into localtime, because timezone are the WORST.
 	g.Date = g.Date.In(tz())
 	g.Time = g.Time.In(tz())
@@ -197,17 +228,25 @@ func (i *Invitation) Schedule(ctx context.Context) error {
 		return fmt.Errorf("Failed to save gamenight: %v", err)
 	}
 
+	gn.ID = nk
 	i.Scheduled = gn
 	out("Created entry: %v", nk)
+	if err := i.Save(ctx); err != nil {
+		out("Failed to update invitation: %v", err)
+	}
 
-	if eid, err := gn.CreateEvent(ctx); err != nil {
+	if err := gn.CreateEvent(ctx); err != nil {
 		out("Failed to create new event: %v", err)
-	} else {
-		out("Created event: %v", eid)
 	}
 
 	// TODO: send out notifications to those who asked.
 	return nil
+}
+
+func (i Invitation) Save(ctx context.Context) error {
+	m := datastore.NewUpdate(i.Key, i)
+	_, err := dsClient.Mutate(ctx, m)
+	return err
 }
 
 func (i Invitation) GetOwner() User {
@@ -327,7 +366,7 @@ func (il invLoader) Convert() Invitation {
 
 type Config struct {
 	Name  string `datastore:"n"`
-	Value string `datastore:"v"`
+	Value string `datastore:"v,noindex"`
 }
 
 type Auth struct {

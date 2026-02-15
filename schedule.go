@@ -99,9 +99,6 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 	for _, k := range dayList {
 		data.Days = append(data.Days, days[k])
 	}
-	for _, d := range data.Days {
-		log.Printf("%#v", d)
-	}
 
 	err = tmpl.ExecuteTemplate(w, "schedule.html", data)
 	if err != nil {

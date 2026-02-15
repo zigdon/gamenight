@@ -17,6 +17,7 @@ import (
 
 var (
 	dsClient *datastore.Client
+	svc *calSvc
 )
 
 func main() {
@@ -33,6 +34,11 @@ func main() {
 	dsClient, err = datastore.NewClient(ctx, projectID)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
+	}
+
+	svc, err = newCalSvc(ctx)
+	if err != nil {
+		log.Fatalf("Failed to get calendar client: %v", err)
 	}
 
 	http.HandleFunc("/", handleIndex)
