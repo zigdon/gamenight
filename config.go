@@ -74,6 +74,15 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 				config[k] = &Config{v.Name, nv}
 			}
 		}
+		var newConfig *Config
+		if nn := r.FormValue("new_name"); nn != "" {
+			newConfig = &Config{
+				Name: nn,
+				Value: r.FormValue("new_value"),
+			}
+			log.Printf("Adding new config: %v", newConfig)
+			updated = true
+		}
 		if updated {
 			tx, err := dsClient.NewTransaction(ctx)
 			if err != nil {
@@ -96,12 +105,21 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 					data.Updated[v.Name] = "failed"
 				}
 			}
+			if newConfig != nil {
+				nk := datastore.IncompleteKey("Config", nil)
+				keys = append(keys, nk)
+				vals = append(vals, newConfig)
+				log.Printf("Adding new key %s for %v", nk, newConfig)
+				data.Updated[newConfig.Name] = "failed"
+				config[nk] = newConfig
+			}
 			if _, err = tx.PutMulti(keys, vals); err != nil {
 				data.Base.Error = fmt.Sprintf("Error updating values: %v", err)
 				return
 			}
 			if _, err := tx.Commit(); err != nil {
 				data.Base.Error = fmt.Sprintf("Error committing transaction: %v", err)
+				return
 			}
 			for k := range data.Updated {
 				data.Updated[k] = "yes"
