@@ -14,7 +14,7 @@ import (
 type ScheduleDay struct {
 	Date string
 	Scheduled *Gamenight
-	Invitations []Invitation
+	Invitations []*Invitation
 }
 
 type ScheduleData struct {
@@ -86,7 +86,7 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			e = ScheduleDay{
 				Date: inv.Date.Format("Monday, Jan 2, 2006"),
-				Invitations: []Invitation{},
+				Invitations: []*Invitation{},
 			}
 			dayList = append(dayList, date)
 		}

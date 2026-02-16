@@ -9,6 +9,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/iterator"
 )
 
 type Status int
@@ -60,8 +61,11 @@ type User struct {
 	ID              *datastore.Key `datastore:"__key__"`
 	DefaultLocation string         `datastore:"l"`
 	Superuser       bool           `datastore:"s"`
+	// Get nag emails when a gn has not been scheduled
 	Emails          bool           `datastore:"e"`
+	// Get an email when a new gn is scheduled
 	Notify          bool           `datastore:"f"`
+	Invite 			bool 		   `datastore:"i"`
 	Name            string         `datastore:"n"`
 	Color           string         `datastore:"c"`
 }
@@ -84,8 +88,8 @@ type Gamenight struct {
 	Time     time.Time      `datastore:"t"`
 	Location string         `datastore:"l"`
 	Notes    string         `datastore:"n"`
-	Owner    User
-	Invite   Invitation
+	Owner    *User
+	Invite   *Invitation
 
 	InviteKey   *datastore.Key `datastore:"a"`
 	OwnerKey    *datastore.Key `datastore:"o"`
@@ -93,11 +97,11 @@ type Gamenight struct {
 	EventDetails *calendar.Event
 }
 
-func (g Gamenight) GetOwner() User {
+func (g Gamenight) GetOwner() *User {
 	if g.OwnerKey != nil {
 		return g.Owner
 	}
-	return User{
+	return &User{
 		Name: "unknown",
 	}
 }
@@ -106,17 +110,21 @@ func (g *Gamenight) Delete(ctx context.Context) error {
 	if g == nil {
 		return nil
 	}
-	if g.EventID != "" {
-		if err := g.RemoveEvent(ctx); err != nil {
-			return fmt.Errorf("Error removing event %s: %v", g.EventID, err)
-		}
+	if g.EventID == "" {
+		return fmt.Errorf("No event ID found to remove!")
+	} else if err := g.RemoveEvent(ctx); err != nil {
+		return fmt.Errorf("Error removing event %s: %v", g.EventID, err)
 	}
 
 	return dsClient.Delete(ctx, g.ID)
 }
 
 func (g *Gamenight) CreateEvent(ctx context.Context) error {
-	eid, err := svc.Add(ctx, g.Date.In(tz()), g.Location, g.Notes, []User{})
+	users, err := getInvitedUsers(ctx)
+	if err != nil {
+		log.Printf("Couldn't get users to invite: %v", err)
+	}
+	eid, err := svc.Add(ctx, g.Date.In(tz()), g.Location, g.Notes, users)
 	if err != nil {
 		return err
 	}
@@ -152,7 +160,7 @@ func (g *Gamenight) Load(ctx context.Context) error {
 			log.Printf("error getting owner %v for %v: %v", g.OwnerKey, g.ID, err)
 		}
 	}
-	g.Owner = o
+	g.Owner = &o
 	if g.InviteKey != nil {
 		g.Invite, err = getInvite(ctx, g.InviteKey)
 		if err != nil {
@@ -177,7 +185,8 @@ func (g Gamenight) When() time.Time {
 }
 
 func (g Gamenight) String() string {
-	return fmt.Sprintf("%s: %s@%s - %s", g.When(), g.GetOwner().Name, g.Location, g.Status)
+	return fmt.Sprintf("%s: %s@%s - %s (%s)",
+	    g.When(), g.GetOwner().Name, g.Location, g.Status, g.EventID)
 }
 
 type Invitation struct {
@@ -187,9 +196,9 @@ type Invitation struct {
 	Location string         `datastore:"l"`
 	Notes    string         `datastore:"n"`
 	Priority Priority       `datastore:"p"`
-	Owner    User
+	Owner    *User
 
-	OwnerKey    *datastore.Key `datastore:"o"`
+	OwnerKey  *datastore.Key `datastore:"o"`
 	Scheduled *Gamenight
 }
 
@@ -243,36 +252,34 @@ func (i *Invitation) Schedule(ctx context.Context) error {
 	return nil
 }
 
-func (i Invitation) Save(ctx context.Context) error {
+func (i *Invitation) Save(ctx context.Context) error {
 	m := datastore.NewUpdate(i.Key, i)
 	_, err := dsClient.Mutate(ctx, m)
 	return err
 }
 
-func (i Invitation) GetOwner() User {
+func (i Invitation) GetOwner() *User {
 	if i.OwnerKey != nil {
 		return i.Owner
 	}
-	return User{
+	return &User{
 		Name: "unknown",
 	}
 }
 
 func (i Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
-	if i.Scheduled != nil {
-		return i.Scheduled, nil
-	}
-	q := datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key).Limit(1)
-	var gns []Gamenight
-	ks, err := dsClient.GetAll(ctx, q, &gns)
-	if err != nil {
-		return nil, fmt.Errorf("can't query for gamenight for %s: %b",
+	it := dsClient.Run(ctx,
+	    datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key))
+	var gn Gamenight
+	_, err := it.Next(&gn)
+	if err == iterator.Done {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("can't query for gamenight for %s: %v",
 		    i.String(), err)
 	}
-	if len(ks) == 0 {
-		return nil, nil
-	}
-	return &gns[0], nil
+	r := &gn
+	return r, nil
 }
 
 func (i *Invitation) Load(ctx context.Context) error {
@@ -280,7 +287,7 @@ func (i *Invitation) Load(ctx context.Context) error {
 	if err := dsClient.Get(ctx, i.OwnerKey, &owner); err != nil {
 		return fmt.Errorf("error getting owner %v for %v: %v", i.OwnerKey, i.Key, err)
 	}
-	i.Owner = owner
+	i.Owner = &owner
 	// Preload the scheduled gamenight, if any, YOLO.
 	i.Scheduled, _ = i.GetGamenight(ctx)
 	// Convert the time into localtime, because timezone are the WORST.
@@ -338,9 +345,10 @@ type invLoader struct {
 	DateText     string         `datastore:"datetext"`
 	PriorityText string         `datastore:"priority_text"`
 
-	OwnerKey     *datastore.Key `datastore:"o"`
+	OwnerKey  *datastore.Key `datastore:"o"`
 	// unused?
-	Owner        *User
+	Owner     *User
+	Scheduled *Gamenight
 }
 
 func (il invLoader) Convert() Invitation {

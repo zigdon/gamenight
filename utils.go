@@ -87,23 +87,23 @@ func getUser(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func getInvite(ctx context.Context, k *datastore.Key) (Invitation, error) {
+func getInvite(ctx context.Context, k *datastore.Key) (*Invitation, error) {
 	var i invLoader
 	if err := dsClient.Get(ctx, k, &i); err != nil {
-		return Invitation{}, fmt.Errorf("error getting invite %v: %v", k, err)
+		return nil, fmt.Errorf("error getting invite %v: %v", k, err)
 	}
 	inv := i.Convert()
-	return inv, nil
+	return &inv, nil
 }
 
-func getAllInvitations(ctx context.Context, starting time.Time, week bool) ([]Invitation, error) {
+func getAllInvitations(ctx context.Context, starting time.Time, week bool) ([]*Invitation, error) {
 	q := datastore.NewQuery("Invitation").FilterField("d", ">=", starting)
 	if week {
 		q = q.FilterField("d", "<=", time.Now().AddDate(0, 0, 7))
 	}
 	it := dsClient.Run(ctx, q)
 
-	var invs []Invitation
+	var invs []*Invitation
 	for {
 		var il invLoader
 		k, err := it.Next(&il)
@@ -117,7 +117,7 @@ func getAllInvitations(ctx context.Context, starting time.Time, week bool) ([]In
 		if err := i.Load(ctx); err != nil {
 			return nil, fmt.Errorf("Error filling invite: %v", err)
 		}
-		invs = append(invs, i)
+		invs = append(invs, &i)
 	}
 
 	return invs, nil
@@ -272,7 +272,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 	}
 
 	// 2. Discard any invites that are after a scheduled gamenight.
-	byDate := make(map[string][]Invitation)
+	byDate := make(map[string][]*Invitation)
 	earliest := ""
 	for _, i := range invs {
 		// If it is already scheduled, no need to schedule it again.
@@ -303,7 +303,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 	invs = byDate[earliest]
 
 	// 4. Sort invites by priority.
-	slices.SortStableFunc(invs, func(a, b Invitation) int {
+	slices.SortStableFunc(invs, func(a, b *Invitation) int {
 		return int(b.Priority - a.Priority)
 	})
 	for n, i := range invs {
@@ -316,4 +316,20 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 		return false, fmt.Errorf("couldn't schedule: %v", err)
 	}
 	return invs[0].Scheduled != nil, nil
+}
+
+func getInvitedUsers(ctx context.Context) ([]User, error) {
+	it := dsClient.Run(ctx, datastore.NewQuery("User").FilterField("i", "=", true))
+	var users []User
+	for {
+		var u User
+		if _, err := it.Next(&u); err == iterator.Done {
+			break
+		} else if err != nil {
+			return users, err
+		}
+		users = append(users, u)
+	}
+
+	return users, nil
 }

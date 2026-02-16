@@ -17,7 +17,7 @@ import (
 // New type for InviteData to include messages and form values for re-rendering
 type InviteData struct {
 	Base        BaseTemplate
-	Invitations []Invitation
+	Invitations []*Invitation
 	When        string
 	Where       string
 	Notes       string
@@ -37,7 +37,6 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	data.Where = whereStr
 	data.Notes = notesStr
 	data.Priority = priorityStr
-	log.Printf("parsed data: %v", data)
 
 	// Basic validation
 	if whenStr == "" {
@@ -53,7 +52,6 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	if data.Base.Error != "" {
 		return fmt.Errorf("Form error: %v", data.Base.Error)
 	}
-	log.Printf("Passed validation")
 
 	parsedTime, err := parseTimespec(whenStr)
 	if err != nil {
@@ -61,10 +59,8 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 		return fmt.Errorf("failed to parse timespec: %v", err)
 	}
 
-	log.Printf("Filled date: %s", parsedTime.Format("2006-01-02 15:04 MST"))
-
 	// Create an Invitation entity
-	invite := Invitation{
+	invite := &Invitation{
 		Key: datastore.IncompleteKey("Invitation", nil),
 		Date:     parsedTime,
 		Time:     parsedTime,
@@ -76,7 +72,6 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 
 	// Parse Priority string to Priority enum
-	log.Printf("Parsing priority")
 	switch priorityStr {
 	case "Can":
 		invite.Priority = PriorityCan
@@ -95,13 +90,13 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 
 	// Save to Datastore
-	log.Printf("Attempting to save invitation to Datastore for user %s", user.Name)
 	ctx := r.Context()
-	nk, err := dsClient.Put(ctx, invite.Key, &invite)
+	nk, err := dsClient.Put(ctx, invite.Key, invite)
 	if err != nil {
 		data.Base.Error = "Error saving invitation!"
 		return fmt.Errorf("failed to save invite: %v", err)
 	}
+	invite.Key = nk
 
 	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
 		nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
@@ -132,6 +127,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	data.Checks = checks
 	data.Base.Msg = fmt.Sprintf("Invitation created for %s%s!",
 		parsedTime.Format("Monday, January 2"), suf)
+	data.Invitations = append(data.Invitations, invite)
 	
 	return nil
 }
@@ -145,7 +141,6 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 	ctx := r.Context()
 	inv := &Invitation{}
 	key := datastore.IDKey("Invitation", int64(id), nil)
-	log.Printf("key: %#v", key)
 	err = dsClient.Get(ctx, key, inv)
 	if err != nil {
 		data.Base.Error = "Invalid request"
@@ -163,7 +158,8 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 	if gn != nil {
 		if err := gn.Delete(ctx); err != nil {
-			log.Printf("Error deleting gamenight %s: %v", gn.String(), err)
+			data.Base.Error = "Couldn't delete gamenight event"
+			return fmt.Errorf("Error deleting gamenight %s: %v", gn.String(), err)
 		} else {
 			log.Printf("Deleted gn: %s", gn.String())
 		}
@@ -214,21 +210,31 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/invite.html"))
+	defer func() {
+		err := tmpl.ExecuteTemplate(w, "invite.html", data)
+		if err != nil {
+			log.Printf("Error executing invite.html: %v", err)
+		}
+	}()
+
 	if r.Method == http.MethodPost {
-		log.Printf("Handling POST")
 		// Parse form data
 		if err := r.ParseForm(); err != nil {
 			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
-			tmpl.ExecuteTemplate(w, "invite.html", data)
 			return
 		}
 
-		log.Printf("Form parsed")
-		log.Printf("%#v", r.Form)
 		if (r.FormValue("withdraw") != "") {
-			err = withdrawInvite(r, data, user)
+			if err := withdrawInvite(r, data, user); err != nil {
+				log.Printf("Error withdrawing invitation: %v", err)
+				return
+			}
 		} else {
-			err = createInvite(r, data, user)
+			if err := createInvite(r, data, user); err != nil {
+				log.Printf("Error creating invitation: %v", err)
+				return
+			}
+
 			// Try and immediately schedule, if appropriate.
 			if added, err := maybeSchedule(ctx, w, false); err != nil {
 				log.Printf("Couldn't run instant-schedule: %v", err)
@@ -238,7 +244,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		}
 		if err != nil {
 			log.Printf("Error processing POST: %v", err)
-			tmpl.ExecuteTemplate(w, "invite.html", data)
 			return
 		}
 
@@ -255,9 +260,5 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
     if msg := r.URL.Query().Get("msg"); msg != "" {
         data.Base.Msg = html.EscapeString(msg)
     }
-	err = tmpl.ExecuteTemplate(w, "invite.html", data)
-	if err != nil {
-		log.Printf("Error executing invite.html: %v", err)
-	}
 }
 

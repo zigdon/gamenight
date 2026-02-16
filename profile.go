@@ -57,6 +57,11 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 			fmt.Sprintf("%s: %v -> %v", "Nag", profile.Emails, !profile.Emails))
 		profile.Emails = len(form["nag"]) > 0
 	}
+	if profile.Invite != (len(form["invite"]) > 0) {
+		changes = append(changes,
+			fmt.Sprintf("%s: %v -> %v", "Invite", profile.Invite, !profile.Invite))
+		profile.Invite = len(form["invite"]) > 0
+	}
 	if profile.Notify != (len(form["notify"]) > 0) {
 		changes = append(changes,
 			fmt.Sprintf("%s: %v -> %v", "Notify", profile.Notify, !profile.Notify))

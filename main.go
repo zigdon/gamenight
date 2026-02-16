@@ -126,7 +126,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		} else {
 			id = fmt.Sprintf("%d", gn.InviteKey.ID)
 		}
-		out("%20d | %s | %s", gn.ID.ID, gn.When(), id)
+		out("%20d | %s | %10s | %s", gn.ID.ID, gn.When(), id, gn.EventID)
 	}
 
 	invs, err := getAllInvitations(ctx, time.Now(), false)
@@ -136,7 +136,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out("\nInvitations (%d):", len(invs))
-	slices.SortFunc(invs, func(a, b Invitation) int {
+	slices.SortFunc(invs, func(a, b *Invitation) int {
 		return int(b.When().Unix()-a.When().Unix())
 	})
 	for _, i := range invs {

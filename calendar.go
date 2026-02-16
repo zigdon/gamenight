@@ -30,6 +30,9 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 	// TODO: remove this when testing is done
 	when = when.AddDate(-1, 0, 0)
 
+	// Make sure we're in the correct timezone. Because stupid timezones.
+	when = when.In(tz())
+
 	midnight := time.Date(when.Year(), when.Month(), when.Day(), 0, 0, 0, 0, tz()).
 	    AddDate(0, 0, 1).
 		Format(time.RFC3339)
@@ -48,9 +51,15 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 			Self: true,
 		},
 		Description: notes,
-		End: &calendar.EventDateTime{DateTime: midnight},
+		End: &calendar.EventDateTime{
+			DateTime: midnight,
+			TimeZone: tz().String(),
+		},
 		Location: location,
-		Start: &calendar.EventDateTime{DateTime: when.Format(time.RFC3339)},
+		Start: &calendar.EventDateTime{
+			DateTime: when.Format(time.RFC3339),
+			TimeZone: tz().String(),
+		},
 		Summary: "(test) Gamenight: YES",
 	}
 	event, err := s.Events.Insert(s.calendarID, e).Do()
@@ -63,14 +72,10 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 	return event.Id, nil
 }
 
-func (s *calSvc) Cancel(ctx context.Context, eid string) error {
-	return fmt.Errorf("Not implemented")
-}
-
 func (s *calSvc) Get(ctx context.Context, eid string) (*calendar.Event, error) {
 	return s.Events.Get(s.calendarID, eid).Do()
 }
 
 func (s *calSvc) Remove(ctx context.Context, eid string) error {
-	return s.Events.Delete(s.calendarID, eid).Do()
+	return s.Events.Delete(s.calendarID, eid).SendUpdates("all").Do()
 }
