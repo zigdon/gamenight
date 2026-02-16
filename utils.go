@@ -313,14 +313,16 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 
 	// 5. Attempt to schedule the top invite.
 	if err := invs[0].Schedule(ctx); err != nil {
+		out("Failed to schedule: %v", err)
 		return false, fmt.Errorf("couldn't schedule: %v", err)
 	}
 	return invs[0].Scheduled != nil, nil
 }
 
-func getInvitedUsers(ctx context.Context) ([]User, error) {
-	it := dsClient.Run(ctx, datastore.NewQuery("User").FilterField("i", "=", true))
-	var users []User
+func getSelectedUsers(ctx context.Context, pref userPreference) ([]*User, error) {
+	it := dsClient.Run(ctx,
+	    datastore.NewQuery("User").FilterField(string(pref), "=", true))
+	var users []*User
 	for {
 		var u User
 		if _, err := it.Next(&u); err == iterator.Done {
@@ -328,7 +330,7 @@ func getInvitedUsers(ctx context.Context) ([]User, error) {
 		} else if err != nil {
 			return users, err
 		}
-		users = append(users, u)
+		users = append(users, &u)
 	}
 
 	return users, nil

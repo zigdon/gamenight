@@ -12,11 +12,11 @@
                     <tr><th><label for="location">Default location</label></th>
                         <td><input id="location" name="location" type="text" value="{{ .Profile.DefaultLocation }}" /></td></tr>
                     <tr><th><label for="nag">Get an email if gamenight needs scheduling?</label></th>
-                        <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} /></td></tr>
+                        <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} />{{ if eq .Highlight "reminder" }} <span class="label-success"><===</span>{{ end }}</td></tr>
                     <tr><th><label for="invite">Get invited to new gamenights on the calendar?</label></th>
                         <td><input type="checkbox" name="invite" id="invite" {{ if .Profile.Invite }} checked="checked" {{ end }} /></td></tr>
                     <tr><th><label for="notify">Get an email when a gamenight is scheduled?</label></th>
-                        <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} /></td></tr>
+                        <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} />{{ if eq .Highlight "sched" }} <span class="label-success"><===</span>{{ end }}</td></tr>
                 {{ if .Base.User.Superuser }}
                     <tr><th>
                         <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />

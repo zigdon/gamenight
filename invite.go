@@ -157,11 +157,12 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		return fmt.Errorf("Can't withdraw gn")
 	}
 	if gn != nil {
+		desc := gn.String()
 		if err := gn.Delete(ctx); err != nil {
 			data.Base.Error = "Couldn't delete gamenight event"
-			return fmt.Errorf("Error deleting gamenight %s: %v", gn.String(), err)
+			return fmt.Errorf("Error deleting gamenight %s: %v", desc, err)
 		} else {
-			log.Printf("Deleted gn: %s", gn.String())
+			log.Printf("Deleted gn: %s", desc)
 		}
 	}
 	if err := dsClient.Delete(ctx, key); err != nil {

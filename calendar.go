@@ -17,7 +17,9 @@ type calSvc struct {
 
 func newCalSvc(ctx context.Context) (*calSvc, error) {
 	srv, err := calendar.NewService(
-		ctx, option.WithCredentialsJSON([]byte(config(ctx, "service_account"))))
+		ctx, option.WithAuthCredentialsJSON(
+			option.ServiceAccount,
+			[]byte(config(ctx, "service_account"))))
 	if err != nil {
 		return nil, fmt.Errorf("Error connecting to calendar: %v", err)
 	}
@@ -26,7 +28,7 @@ func newCalSvc(ctx context.Context) (*calSvc, error) {
 	}, nil
 }
 
-func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string, invite []User) (string, error) {
+func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string, invite []*User) (string, error) {
 	// TODO: remove this when testing is done
 	when = when.AddDate(-1, 0, 0)
 

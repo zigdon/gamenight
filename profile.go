@@ -11,6 +11,7 @@ type ProfileData struct {
 	Base    BaseTemplate
 	Profile *User
 	Users   []User
+	Highlight string
 }
 
 func updateProfile(r *http.Request, data *ProfileData, user *User) error {
@@ -102,17 +103,21 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		Profile: user,
 		Base: BaseTemplate{Tab: "profile", User: user},
 	}
-
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
+
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
+		tmpl.ExecuteTemplate(w, "invite.html", data)
+		return
+	}
+
+	if hi := r.FormValue("hi"); hi != "" {
+		data.Highlight = hi
+	}
+
 	if r.Method == http.MethodPost {
 		log.Printf("Handling POST")
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
-			tmpl.ExecuteTemplate(w, "invite.html", data)
-			return
-		}
-
 		log.Printf("Form parsed")
 		log.Printf("%#v", r.Form)
 		err = updateProfile(r, data, user)
@@ -163,4 +168,3 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error executing profile.html: %v", err)
 	}
 }
-

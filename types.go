@@ -57,6 +57,13 @@ type BaseTemplate struct {
 	User *User
 }
 
+type userPreference string
+const (
+	emailsPreference userPreference = "e"
+	notifyPreference userPreference = "f"
+	invitePreference userPreference = "i"
+)
+
 type User struct {
 	ID              *datastore.Key `datastore:"__key__"`
 	DefaultLocation string         `datastore:"l"`
@@ -120,7 +127,7 @@ func (g *Gamenight) Delete(ctx context.Context) error {
 }
 
 func (g *Gamenight) CreateEvent(ctx context.Context) error {
-	users, err := getInvitedUsers(ctx)
+	users, err := getSelectedUsers(ctx, invitePreference)
 	if err != nil {
 		log.Printf("Couldn't get users to invite: %v", err)
 	}
@@ -214,7 +221,7 @@ func (i *Invitation) Schedule(ctx context.Context) error {
 	if i.Date.Weekday() == time.Saturday {
 		if i.Priority == PriorityCan && now.Weekday() < time.Tuesday {
 			out("Today is %s, not scheduling 'Can' for Saturday yet", now.Weekday())
-			return nil
+			return fmt.Errorf("Not scheduling 'can' on %s", now.Weekday())
 		}
 	}
 
@@ -248,7 +255,11 @@ func (i *Invitation) Schedule(ctx context.Context) error {
 		out("Failed to create new event: %v", err)
 	}
 
-	// TODO: send out notifications to those who asked.
+	if err := gn.Load(ctx); err != nil {
+		out("Error loading gn: %v", err)
+	} else if err := email(ctx, gnScheduled, gn); err != nil {
+		out("Failed to send out notification: %v", err)
+	}
 	return nil
 }
 
@@ -311,7 +322,7 @@ func (i Invitation) IsOwner(u User) bool {
 }
 
 func (i Invitation) When() time.Time {
-	return dateTime(i.Date, i.Time)
+	return dateTime(i.Date.In(tz()), i.Time.In(tz()))
 }
 
 func (i Invitation) PriorityText() string {
