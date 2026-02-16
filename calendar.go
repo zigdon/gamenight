@@ -79,3 +79,22 @@ func (s *calSvc) Get(ctx context.Context, eid string) (*calendar.Event, error) {
 func (s *calSvc) Remove(ctx context.Context, eid string) error {
 	return s.Events.Delete(s.calendarID, eid).SendUpdates("all").Do()
 }
+
+// Need to run this once to set the default timezone for the service account.
+func (s *calSvc) SetDefaultTZ(ctx context.Context) {
+	die := func(tmpl string, args ...any) {
+		panic(fmt.Sprintf(tmpl, args...))
+	}
+	c, err := s.Calendars.Get("primary").Do()
+	if err != nil {
+		die("Failed to get calendar: %v", err)
+	}
+	log.Printf("tz: %v", c.TimeZone)
+	c.TimeZone = tz().String()
+	c, err = s.Calendars.Update(c.Id, c).Do()
+	if err != nil {
+		die("Failed to updated calendar: %v", err)
+	}
+	log.Printf("tz: %v", c.TimeZone)
+	log.Printf("Calendar updated")
+}

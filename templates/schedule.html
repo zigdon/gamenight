@@ -16,7 +16,6 @@
                                 {{ if .Notes }}<br/>{{ .Notes }}{{ end }}
                                 {{ if $.Base.User.Superuser }}
                                 <br/>EventID: <code>{{ .EventID }}</code>
-                                <pre>{{ printf "%#v" .EventDetails }}</pre>
                                 {{ end }}
                             </li>
                         {{ end }}{{ else }}

@@ -40,6 +40,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to get calendar client: %v", err)
 	}
+	// Only need to do this once:
+	// svc.SetDefaultTZ(ctx)
 
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/logout", handleLogout)
