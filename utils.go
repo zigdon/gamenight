@@ -50,7 +50,7 @@ func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
     ctx := r.Context()
 	email := r.Header.Get("X-Appengine-User-Email")
 	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue=/schedule", http.StatusFound)
+		http.Redirect(w, r, "/_ah/login?continue="+r.URL.Path, http.StatusFound)
 		return nil, fmt.Errorf("Not logged in")
 	}
 
@@ -60,6 +60,11 @@ func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
         http.Error(w, "Error fetching user", http.StatusInternalServerError)
 		return nil, fmt.Errorf("Error fetching user")
     }
+	/* For initializing users in the dev environment.
+	if email == "gamenight@peeron.com" {
+		user.Superuser = true
+	}
+	*/
 
 	return user, nil
 }

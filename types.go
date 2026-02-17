@@ -346,10 +346,15 @@ func (i Invitation) PriorityText() string {
 	}
 }
 
-func (i Invitation) String() string {
+func (i *Invitation) String() string {
+	name := "N/A"
+	owner := i.GetOwner()
+	if owner != nil {
+		name = owner.Name
+	}
 	return fmt.Sprintf(
 		"%s: %s @ %s (%s): %s",
-		i.When(), i.GetOwner().Name, i.Location, i.PriorityText(), i.Notes)
+		i.When(), name, i.Location, i.PriorityText(), i.Notes)
 }
 
 type invLoader struct {

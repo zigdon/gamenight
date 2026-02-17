@@ -111,5 +111,9 @@ func send(ctx context.Context, users []*User, subject, body string) error {
 		return fmt.Errorf("Error sending email %q: %v", subject, err)
 	}
 	log.Printf("Sent %q to %d users: %s", subject, len(users), res.RequestId)
+	log.Printf("From: %s", sender)
+	log.Printf("BCC: %v", addrs)
+	log.Printf("Subject: %s", subject)
+	log.Printf("Body:\n%s", body)
 	return nil
 }

@@ -80,11 +80,10 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 			log.Print(c)
 		}
 
-		nk, err := dsClient.Put(ctx, profile.ID, profile)
+		_, err := dsClient.Put(ctx, profile.ID, profile)
 		if err != nil {
 			return fmt.Errorf("Error updating user: %v", err)
 		}
-		log.Printf("Update database for %v", nk)
 
 		data.Base.Msg = "Profile updated"
 	}
@@ -117,9 +116,6 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		log.Printf("Handling POST")
-		log.Printf("Form parsed")
-		log.Printf("%#v", r.Form)
 		err = updateProfile(r, data, user)
 		if err != nil {
 			if data.Base.Error == "" {
