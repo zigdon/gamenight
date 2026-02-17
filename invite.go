@@ -157,6 +157,7 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		return fmt.Errorf("Can't withdraw gn")
 	}
 	if gn != nil {
+		gn.Load(ctx)
 		desc := gn.String()
 		if err := gn.Delete(ctx); err != nil {
 			data.Base.Error = "Couldn't delete gamenight event"

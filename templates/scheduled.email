@@ -1,0 +1,19 @@
+{{/* A new gamenight has been scheduled! */ -}}
+
+Hooray! There is a new gamenight scheduled:
+
+  +===================================
+  |  When: {{ .When }}
+  |  Where: {{ .Where }}
+  |  Who: {{ .Who }}
+{{- if .Notes }}
+  |
+  |  {{ .Notes }}
+{{- end }}
+  +===================================
+
+Hope to see you there!
+
+Dan
+
+{{ template "footer.email" . }}

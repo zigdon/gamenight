@@ -1,0 +1,5 @@
+{{/* Still looking to find a host for gamenight this week! */ -}}
+
+We still haven't had anyone volunteer to host gamenight this week. For now, the site will show 'Maybe', but if you'd like to host, please go to {{ .InviteURL }} to have folks come by.
+
+{{ template "footer.email" . }}

@@ -1,0 +1,5 @@
+{{/* Want to host gamenight? */ -}}
+
+Seems that no one has offered to host gamenight this week. Want to host? Go to {{ .InviteURL }}!
+
+{{ template "footer.email" . }}

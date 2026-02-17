@@ -1,0 +1,4 @@
+
+Thanks!
+
+(You asked to get these emails {{ .Purpose }}. If you want to stop getting these, go to {{ .Unsubscribe }} and uncheck the '{{ .Checkbox }}' option.)

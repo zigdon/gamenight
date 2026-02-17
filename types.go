@@ -191,9 +191,17 @@ func (g Gamenight) When() time.Time {
 	return dateTime(g.Date.In(tz()), g.Time.In(tz()))
 }
 
-func (g Gamenight) String() string {
+func (g *Gamenight) String() string {
+	if g == nil {
+		return "Deleted gamenight"
+	}
+	name := "N/A"
+	owner := g.GetOwner()
+	if owner != nil {
+		name = owner.Name
+	}
 	return fmt.Sprintf("%s: %s@%s - %s (%s)",
-	    g.When(), g.GetOwner().Name, g.Location, g.Status, g.EventID)
+	    g.When(), name, g.Location, g.Status, g.EventID)
 }
 
 type Invitation struct {
