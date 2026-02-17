@@ -67,7 +67,7 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 			fmt.Sprintf("%s: %v -> %v", "Notify", profile.Notify, !profile.Notify))
 		profile.Notify = len(form["notify"]) > 0
 	}
-	if profile.Superuser != (len(form["admin"]) > 0) {
+	if devServer(ctx) && profile.Superuser != (len(form["admin"]) > 0) {
 		changes = append(changes,
 			fmt.Sprintf("%s: %v -> %v", "Admin", profile.Superuser, !profile.Superuser))
 		profile.Superuser = len(form["admin"]) > 0
@@ -99,7 +99,11 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 
 	data := &ProfileData{
 		Profile: user,
-		Base: BaseTemplate{Tab: "profile", User: user},
+		Base: BaseTemplate{
+			Tab: "profile",
+			User: user,
+			DevServer: devServer(r.Context()),
+		},
 	}
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
 

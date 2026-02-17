@@ -32,7 +32,11 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
 
 	data := ScheduleData{
-		Base: BaseTemplate{Tab: "schedule", User: user},
+		Base: BaseTemplate{
+			Tab: "schedule",
+			User: user,
+			DevServer: devServer(ctx),
+		},
 	}
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/schedule.html"))
 

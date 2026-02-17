@@ -55,6 +55,7 @@ type BaseTemplate struct {
 	Error string
 	Msg string
 	User *User
+	DevServer bool
 }
 
 type userPreference string

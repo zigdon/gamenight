@@ -21,7 +21,7 @@
                     <tr><th>
                         <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />
                         <label for="admin">Admin</label></th>
-                        <td><input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }} /></td></tr>
+                        <td><input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }}{{ if not .Base.DevServer }}disabled="true"{{ end }} /></td></tr>
                 {{ end }}
                 </table>
                 <button type="submit" class="btn">Save</button>

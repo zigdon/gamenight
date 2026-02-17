@@ -47,11 +47,14 @@ func main() {
 	http.HandleFunc("/logout", handleLogout)
 	http.HandleFunc("/invite", handleInvite)
 	http.HandleFunc("/profile", handleProfile)
-	http.HandleFunc("/debug", handleDebug)
 	http.HandleFunc("/schedule", handleSchedule)
 	http.HandleFunc("/config", handleConfig)
 	http.HandleFunc("/tasks/nag", handleNag)
 	http.HandleFunc("/tasks/schedule", handleTaskSchedule)
+
+	if config(ctx, "devserver") != "" {
+		http.HandleFunc("/debug", handleDebug)
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

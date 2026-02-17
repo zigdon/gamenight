@@ -33,7 +33,7 @@
                                                 <li><a href="/tasks/schedule">Schedule</a></li>
                                                 <li><a href="/tasks/nag?email=first">Send first nag email</a></li>
                                                 <li><a href="/tasks/nag?email=second">Send second nag email</a></li>
-                                                <li><a href="/debug">debug data</a></li>
+                                                {{ if .Base.DevServer }}<li><a href="/debug">debug data</a></li>{{ end }}
                                             </ul>
                                         </li>
                                     {{ end }}

@@ -191,7 +191,11 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := &InviteData{
-		Base: BaseTemplate{Tab: "invite", User: user},
+		Base: BaseTemplate{
+			Tab: "invite",
+			User: user,
+			DevServer: devServer(ctx),
+		},
 		Invitations: invs,
 		Checks: make(map[string]string),
 	}

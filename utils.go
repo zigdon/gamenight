@@ -236,6 +236,10 @@ func parseTimespec(timespec string) (time.Time, error) {
 	return parsedTime, err
 }
 
+func devServer(ctx context.Context) bool {
+	return config(ctx, "devserver") != ""
+}
+
 func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool, error) {
 	out := func(t string, args ...any) {
 		log.Printf(t, args...)
