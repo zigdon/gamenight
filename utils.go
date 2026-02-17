@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"slices"
 	"strings"
 	"time"
@@ -47,19 +48,19 @@ func getAllUsers(ctx context.Context) ([]User, error) {
 }
 
 func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
-    ctx := r.Context()
+	ctx := r.Context()
 	email := r.Header.Get("X-Appengine-User-Email")
 	if email == "" {
 		http.Redirect(w, r, "/_ah/login?continue="+r.URL.Path, http.StatusFound)
 		return nil, fmt.Errorf("Not logged in")
 	}
 
-    user, err := getUser(ctx, email)
-    if err != nil {
-        log.Printf("Error fetching user %s: %v", email, err)
-        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+	user, err := getUser(ctx, email)
+	if err != nil {
+		log.Printf("Error fetching user %s: %v", email, err)
+		http.Error(w, "Error fetching user", http.StatusInternalServerError)
 		return nil, fmt.Errorf("Error fetching user")
-    }
+	}
 	/* For initializing users in the dev environment.
 	if email == "gamenight@peeron.com" {
 		user.Superuser = true
@@ -79,10 +80,10 @@ func getUser(ctx context.Context, email string) (*User, error) {
 			Name: strings.Split(email, "@")[0],
 		}
 		nk, err := dsClient.Put(ctx, user.ID, user)
-        if err != nil {
-            log.Printf("Error saving new user to Datastore: %v", err)
-            return nil, fmt.Errorf("Couldn't created user")
-        }
+		if err != nil {
+			log.Printf("Error saving new user to Datastore: %v", err)
+			return nil, fmt.Errorf("Couldn't created user")
+		}
 
 		log.Printf("New user created: %v", nk)
 	}
@@ -204,7 +205,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	// If all we got was a weekday (and maybe a time), the date will parse
 	// as 0000-01-01. In that case, we need to get the weekday requested, and
 	// find the next one of those for the date.
-	if (found >= 25) {
+	if found >= 25 {
 		req := strings.ToLower(strings.Split(strings.Split(timespec, ",")[0], " ")[0])
 		cur := time.Now().In(tz())
 		cnt := 0
@@ -222,14 +223,14 @@ func parseTimespec(timespec string) (time.Time, error) {
 	}
 
 	if parsedTime.Hour() == 0 {
-		parsedTime = parsedTime.Add(20*time.Hour)
+		parsedTime = parsedTime.Add(20 * time.Hour)
 	}
 
 	// Default year is this year unless it's in the past
 	now := time.Now().In(tz())
 	if parsedTime.Year() == 0 {
 		parsedTime = parsedTime.AddDate(now.Year(), 0, 0)
-		if (parsedTime.Before(now)) {
+		if parsedTime.Before(now) {
 			parsedTime = parsedTime.AddDate(1, 0, 0)
 		}
 	}
@@ -237,7 +238,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 }
 
 func devServer(ctx context.Context) bool {
-	return config(ctx, "devserver") != ""
+	return os.Getenv("GAE_ENV") != "standard"
 }
 
 func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool, error) {
@@ -275,7 +276,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 
 	// Up to midnight of next saturday, or next GN date, whichever is first.
 	next := time.Date(now.Year(), now.Month(), now.Day(),
-	    0, 0, 0, 0, tz()).AddDate(0, 0, int(7-now.Weekday()))
+		0, 0, 0, 0, tz()).AddDate(0, 0, int(7-now.Weekday()))
 	if nextGN, err := getNextGamenight(ctx); err != nil {
 		out("Couldn't find next gamenight: %v", err)
 	} else {
@@ -335,7 +336,7 @@ func maybeSchedule(ctx context.Context, w http.ResponseWriter, debug bool) (bool
 
 func getSelectedUsers(ctx context.Context, pref userPreference) ([]*User, error) {
 	it := dsClient.Run(ctx,
-	    datastore.NewQuery("User").FilterField(string(pref), "=", true))
+		datastore.NewQuery("User").FilterField(string(pref), "=", true))
 	var users []*User
 	for {
 		var u User
