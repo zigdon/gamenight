@@ -48,7 +48,6 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 		profile.Name = form["name"][0]
 	}
 	if profile.DefaultLocation != form["location"][0] {
-
 		changes = append(changes,
 			fmt.Sprintf("%s: %q -> %q", "Location", profile.DefaultLocation, form["location"][0]))
 		profile.DefaultLocation = form["location"][0]
