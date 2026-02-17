@@ -155,13 +155,16 @@ func parseTimespec(timespec string) (time.Time, error) {
 		"2006-01-02, 3pm",
 		"2006-01-02 3:04pm",
 		"2006-01-02, 3:04pm",
+		"2006-01-02 1504",
 		"2006-01-02 15:04",
+		"2006-01-02, 1504",
 		"2006-01-02, 15:04",
 		"2006-01-02",
 		"Jan 2 3pm",
 		"Jan 2, 3pm",
 		"Jan 2 3:04pm",
 		"Jan 2, 3:04pm",
+		"Jan 2 1504",
 		"Jan 2 15:04",
 		"Jan 2, 15:04",
 		"Jan 2",
@@ -169,14 +172,16 @@ func parseTimespec(timespec string) (time.Time, error) {
 		"1/2, 3pm",
 		"1/2 3:04pm",
 		"1/2, 3:04pm",
+		"1/2 1504",
 		"1/2 15:04",
 		"1/2, 15:04",
 		"1/2",
-		// from here on we're really reaching (n=21)
+		// from here on we're really reaching (n=25)
 		"Monday 3pm",
 		"Monday, 3pm",
 		"Monday 3:04pm",
 		"Monday, 3:04pm",
+		"Monday 1504",
 		"Monday 15:04",
 		"Monday, 15:04",
 		"Monday",
@@ -199,7 +204,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	// If all we got was a weekday (and maybe a time), the date will parse
 	// as 0000-01-01. In that case, we need to get the weekday requested, and
 	// find the next one of those for the date.
-	if (found >= 21) {
+	if (found >= 25) {
 		req := strings.ToLower(strings.Split(strings.Split(timespec, ",")[0], " ")[0])
 		cur := time.Now().In(tz())
 		cnt := 0
