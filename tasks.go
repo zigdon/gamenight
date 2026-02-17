@@ -34,6 +34,39 @@ func cronOrAdmin(ctx context.Context, r *http.Request) (bool, error) {
 }
 
 
+func handleNag(w http.ResponseWriter, r *http.Request) {
+	// Whatever happens, redirect back to root.
+	defer func() {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}()
+
+	// Check auth.
+	ctx := r.Context()
+	_, err := cronOrAdmin(ctx, r)
+	if err != nil {
+        http.Error(w, "Unauthorized", http.StatusForbidden)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Error parsing form: %v", err)
+		return
+	}
+
+	seq := r.FormValue("email")
+	switch seq {
+	case "first":
+		err = email(ctx, firstNag, nil)
+	case "second":
+		err = email(ctx, secondNag, nil)
+	default:
+		err = fmt.Errorf("Bad nag call: %q", seq)
+	}
+	if err != nil {
+		log.Printf("Error in nag task: %v", err)
+	}
+}
+
 func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	// Whatever happens, redirect back to the schedule page.
 	defer func() {

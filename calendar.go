@@ -29,9 +29,6 @@ func newCalSvc(ctx context.Context) (*calSvc, error) {
 }
 
 func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string, invite []*User) (string, error) {
-	// TODO: remove this when testing is done
-	when = when.AddDate(-1, 0, 0)
-
 	// Make sure we're in the correct timezone. Because stupid timezones.
 	when = when.In(tz())
 
@@ -62,7 +59,7 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 			DateTime: when.Format(time.RFC3339),
 			TimeZone: tz().String(),
 		},
-		Summary: "(test) Gamenight: YES",
+		Summary: "Gamenight: YES",
 	}
 	event, err := s.Events.Insert(s.calendarID, e).Do()
 	if err != nil {

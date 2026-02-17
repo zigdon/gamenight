@@ -50,8 +50,7 @@ func main() {
 	http.HandleFunc("/debug", handleDebug)
 	http.HandleFunc("/schedule", handleSchedule)
 	http.HandleFunc("/config", handleConfig)
-	//http.HandleFunc("/tasks/nag", nil)
-	//http.HandleFunc("/tasks/reset", nil)
+	http.HandleFunc("/tasks/nag", handleNag)
 	http.HandleFunc("/tasks/schedule", handleTaskSchedule)
 
 	port := os.Getenv("PORT")
