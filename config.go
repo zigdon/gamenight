@@ -17,17 +17,8 @@ type ConfigData struct {
 }
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
-	user, err := loggedIn(w, r)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-	if !user.Superuser {
-		log.Printf("%s is not an admin", user.ID.Name)
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-
+	ctx := r.Context()
+	user, _ := getUserSession(ctx, r)
 	data := ConfigData{
 		Base: BaseTemplate{
 			Subtab: "config",
@@ -38,7 +29,6 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 		Updated: make(map[string]string),
 	}
 
-	ctx := r.Context()
 	it := dsClient.Run(ctx, datastore.NewQuery("Config"))
 	config := make(map[*datastore.Key]*Config)
 	for {

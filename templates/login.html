@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <div id="g_id_onload"
+       data-client_id="{{ .ClientID }}"
+       data-callback="handleCredentialResponse">
+  </div>
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <script>
+    function handleCredentialResponse(response) {
+      const idToken = response.credential;
+
+      fetch('/auth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-ID-TOKEN': idToken,
+        },
+      })
+      .then(res => {
+        if (res.ok) {
+          window.location.href = "{{ .Redirect }}"
+        } else {
+          window.location.href = "/"
+        }
+      })
+    }
+  </script>
+</body>
+</html>

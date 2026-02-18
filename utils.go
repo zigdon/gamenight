@@ -47,29 +47,6 @@ func getAllUsers(ctx context.Context) ([]User, error) {
 	return users, nil
 }
 
-func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
-	ctx := r.Context()
-	email := r.Header.Get("X-Appengine-User-Email")
-	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue="+r.URL.Path, http.StatusFound)
-		return nil, fmt.Errorf("Not logged in")
-	}
-
-	user, err := getUser(ctx, email)
-	if err != nil {
-		log.Printf("Error fetching user %s: %v", email, err)
-		http.Error(w, "Error fetching user", http.StatusInternalServerError)
-		return nil, fmt.Errorf("Error fetching user")
-	}
-	/* For initializing users in the dev environment.
-	if email == "gamenight@peeron.com" {
-		user.Superuser = true
-	}
-	*/
-
-	return user, nil
-}
-
 func getUser(ctx context.Context, email string) (*User, error) {
 	user := &User{}
 	key := datastore.NameKey("User", email, nil)

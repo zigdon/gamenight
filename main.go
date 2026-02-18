@@ -7,50 +7,69 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"slices"
-	"strconv"
 	"time"
 
 	"cloud.google.com/go/datastore"
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"github.com/gorilla/sessions"
 	"google.golang.org/api/iterator"
 )
 
 var (
 	dsClient *datastore.Client
 	svc *calSvc
+	sm *secretmanager.Client
+	sessionStore *sessions.CookieStore
 )
 
-func main() {
-	ctx := context.Background()
+func initThings(ctx context.Context) error {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
-	if projectID == "" {
-		log.Printf("ERROR: environment variable GOOGLE_CLOUD_PROJECT not set. Datastore client may not initialize correctly.")
-		// We can try to proceed without it, but Datastore operations might fail.
-	} else {
-        log.Printf("Using Google Cloud Project ID: %s", projectID)
-    }
-
 	var err error
 	dsClient, err = datastore.NewClient(ctx, projectID)
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		return fmt.Errorf("Failed to create client: %v", err)
 	}
 
 	svc, err = newCalSvc(ctx)
 	if err != nil {
-		log.Fatalf("Failed to get calendar client: %v", err)
+		return fmt.Errorf("Failed to get calendar client: %v", err)
 	}
 	// Only need to do this once:
 	// svc.SetDefaultTZ(ctx)
 
+	sm, err = secretmanager.NewClient(ctx)
+	if err != nil {
+		return fmt.Errorf("Can't get secrets: %v", err)
+	}
+
+	sessionStore = sessions.NewCookieStore([]byte(getSecret(ctx, "cookie_key")))
+	sessionStore.Options = &sessions.Options{
+		Path:     "/",
+        MaxAge:   86400 * 7, // 7 days
+        HttpOnly: true,      // Prevents JavaScript access (XSS protection)
+        Secure:   true,      // Only sent over HTTPS
+        SameSite: http.SameSiteLaxMode,
+	}
+
+	return nil
+}
+
+func main() {
+	ctx := context.Background()
+	if err := initThings(ctx); err != nil {
+		log.Fatalf("Init failed: %v", err)
+	}
+
 	http.HandleFunc("/", handleIndex)
-	http.HandleFunc("/logout", handleLogout)
-	http.HandleFunc("/invite", handleInvite)
-	http.HandleFunc("/profile", handleProfile)
-	http.HandleFunc("/schedule", handleSchedule)
-	http.HandleFunc("/config", handleConfig)
-	http.HandleFunc("/tasks/nag", handleNag)
-	http.HandleFunc("/tasks/schedule", handleTaskSchedule)
+	http.HandleFunc("/auth/login", handleLogin)
+	http.HandleFunc("/auth/token", handleToken)
+	http.HandleFunc("/auth/logout", handleLogout)
+	loginFunc("/invite", handleInvite)
+	loginFunc("/profile", handleProfile)
+	loginFunc("/schedule", handleSchedule)
+	adminFunc("/config", handleConfig)
+	adminFunc("/tasks/nag", handleNag)
+	adminFunc("/tasks/schedule", handleTaskSchedule)
 
 	if config(ctx, "devserver") != "" {
 		http.HandleFunc("/debug", handleDebug)
@@ -64,119 +83,6 @@ func main() {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func handleDebug(w http.ResponseWriter, r *http.Request) {
-	user, err := loggedIn(w, r)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-	if !user.Superuser {
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-
-	ctx := r.Context()
-	out := func(t string, args ...any) {
-		fmt.Fprintf(w, t+"\n", args...)
-	}
-	w.Header().Set("Content-Type", "text/html")
-	if err := r.ParseForm(); err != nil {
-		out("Error parsing form data: %v", err)
-	}
-	if r.FormValue("delete") == "Submit" {
-		t := r.FormValue("type")
-		id, err := strconv.Atoi(r.FormValue("id"))
-		if err != nil {
-			out("Can't parse %q: %v", r.FormValue("key"), err)
-		}
-		key := datastore.IDKey(t, int64(id), nil)
-		var gn Gamenight
-		err = dsClient.Get(ctx, key, &gn)
-		if err != nil {
-			out("Error loading %v to delete: %v", key, err)
-		} else if err := dsClient.Delete(ctx, key); err != nil {
-			out("Error deleting %v: %v", key, err)
-		} else {
-			out("Deleted %v", key)
-		}
-	}
-	out("<form>Delete:<br/>kind <input name=\"type\"/> ")
-	out("id <input name=\"id\"/> ")
-	out("<input name=\"delete\" type=\"submit\"/></form><hr/>")
-	out("<pre>")
-	out("Gamenights:")
-	it := dsClient.Run(ctx,
-	    datastore.NewQuery("Gamenight").
-		FilterField("d", ">", time.Now()).
-		Order("-d"))
-	for {
-		var gn Gamenight
-		k, err := it.Next(&gn)
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			out("iterator error: %v", err)
-			continue
-		}
-		if err := gn.Load(ctx); err != nil {
-			log.Printf("error loading gn %v: %v", k, err)
-		}
-		var id string
-		if gn.InviteKey == nil {
-			id = "N/A"
-		} else {
-			id = fmt.Sprintf("%d", gn.InviteKey.ID)
-		}
-		out("%20d | %s | %10s | %s", gn.ID.ID, gn.When(), id, gn.EventID)
-	}
-
-	invs, err := getAllInvitations(ctx, time.Now(), false)
-	if err != nil {
-		out("inv query err: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	out("\nInvitations (%d):", len(invs))
-	slices.SortFunc(invs, func(a, b *Invitation) int {
-		return int(b.When().Unix()-a.When().Unix())
-	})
-	for _, i := range invs {
-		if err := i.Load(ctx); err != nil {
-			out("Error loading invite: %v", err)
-		}
-		gnid := int64(-1)
-		gn, err := i.GetGamenight(ctx)
-		if err != nil {
-			out("error getting gn: %v", err)
-		}
-		if gn != nil {
-			gnid = gn.ID.ID
-		}
-		out("%20d | %s | %15s | %20d | %s: %s", i.Key.ID, i.When(), i.GetOwner().Name, gnid, i.Location, i.Notes)
-	}
-
-	it = dsClient.Run(ctx, datastore.NewQuery("User"))
-	out("\nUsers:")
-	for {
-		var u User
-		k, err := it.Next(&u)
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			out("error getting user: %v", err)
-			continue
-		}
-		out("%30s | %20s | %s", k.Name, u.Name, u.DefaultLocation)
-	}
-}
-
-
-func handleLogout(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "/_ah/logout?continue=/", http.StatusFound)
 }
 
 func mkDefault() Gamenight {

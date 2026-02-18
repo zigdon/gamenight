@@ -176,13 +176,9 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 }
 
 func handleInvite(w http.ResponseWriter, r *http.Request) {
-	user, err := loggedIn(w, r)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-
     ctx := r.Context()
+	user, _ := getUserSession(ctx, r)
+
 	invs, err := getAllInvitations(ctx, time.Now(), false)
 	if err != nil {
 		log.Printf("query err: %v", err)
