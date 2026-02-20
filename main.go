@@ -80,6 +80,8 @@ func main() {
 		stageInstance = true
 	}
 
+	http.HandleFunc("/tos", handleTOS)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -116,6 +118,22 @@ type IndexData struct {
 	Future     []Future
 	Updated    time.Time
 	CalendarID string
+}
+
+func handleTOS(w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Base BaseTemplate
+	}{
+		Base: BaseTemplate{
+			Tab: "",
+			User: &User{},
+		},
+	}
+	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/tos.html"))
+	err := tmpl.ExecuteTemplate(w, "tos.html", data)
+	if err != nil {
+		log.Printf("Error executing tos: %v", err)
+	}
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {

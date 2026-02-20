@@ -61,7 +61,7 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 		},
 		Summary: "Gamenight: YES",
 	}
-	event, err := s.Events.Insert(s.calendarID, e).Do()
+	event, err := s.Events.Insert(s.calendarID, e).SendUpdates("all").Do()
 	if err != nil {
 		log.Printf("Error creating event %#v: %v", e, err)
 		return "", fmt.Errorf("Failed to create event: %v", err)
