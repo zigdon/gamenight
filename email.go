@@ -12,35 +12,38 @@ import (
 )
 
 type emailTemplate string
+
 const (
-	firstNag      emailTemplate = "first"
-	secondNag     emailTemplate = "second"
-	gnScheduled   emailTemplate = "scheduled"
+	firstNag    emailTemplate = "first"
+	secondNag   emailTemplate = "second"
+	gnScheduled emailTemplate = "scheduled"
 )
 
 func email(ctx context.Context, emailType emailTemplate, gn *Gamenight) error {
 	subj := map[emailTemplate]string{
-		firstNag: "Want to host gamenight?",
-		secondNag: "Still looking to find a host for gamenight this week!",
+		firstNag:    "Want to host gamenight?",
+		secondNag:   "Still looking to find a host for gamenight this week!",
 		gnScheduled: "A new gamenight has been scheduled!",
 	}
 
 	file := fmt.Sprintf("templates/%s.email", emailType)
 	tmpl := template.Must(template.ParseFiles("templates/footer.email", file))
 	data := map[string]string{
-		"InviteURL": fmt.Sprintf("https://%s/invite", config(ctx, "url")),
+		"InviteURL":   fmt.Sprintf("https://%s/invite", config(ctx, "url")),
 		"Unsubscribe": fmt.Sprintf("https://%s/profile", config(ctx, "url")),
 	}
 
 	var pref userPreference
 	switch emailType {
-		case firstNag, secondNag: {
+	case firstNag, secondNag:
+		{
 			pref = emailsPreference
 			data["Unsubscribe"] += "?hi=reminder"
 			data["Checkbox"] = "Get an email if gamenight needs scheduling"
 			data["Purpose"] = "if no one is hosting gamenight"
 		}
-		case gnScheduled: {
+	case gnScheduled:
+		{
 			pref = notifyPreference
 			data["Unsubscribe"] += "?hi=sched"
 			data["Checkbox"] = "Get an email when a gamenight is scheduled"
@@ -53,7 +56,8 @@ func email(ctx context.Context, emailType emailTemplate, gn *Gamenight) error {
 			data["Who"] = gn.GetOwner().Name
 			data["Notes"] = gn.Notes
 		}
-		default: {
+	default:
+		{
 			return fmt.Errorf("Impossible email type")
 		}
 	}
@@ -83,7 +87,7 @@ func send(ctx context.Context, users []*User, subject, body string) error {
 	}
 
 	// Your API key as a standard Go string
-    apiKey := config(ctx, "smtp2go_key")
+	apiKey := getSecret(ctx, "smtp2go_key")
 	if apiKey == "" {
 		return fmt.Errorf("No API key found")
 	}
@@ -100,9 +104,9 @@ func send(ctx context.Context, users []*User, subject, body string) error {
 	}
 
 	email := smtp2go.Email{
-		From: fmt.Sprintf("Gamenight <%s>", sender),
-		To: []string{"dan@peeron.com"},
-		Bcc: addrs,
+		From:     fmt.Sprintf("Gamenight <%s>", sender),
+		To:       []string{"dan@peeron.com"},
+		Bcc:      addrs,
 		Subject:  subject,
 		TextBody: body,
 	}
@@ -112,10 +116,10 @@ func send(ctx context.Context, users []*User, subject, body string) error {
 	}
 	log.Printf("Sent %q to %d users: %s", subject, len(users), res.RequestId)
 	/*
-	log.Printf("From: %s", sender)
-	log.Printf("BCC: %v", addrs)
-	log.Printf("Subject: %s", subject)
-	log.Printf("Body:\n%s", body)
+		log.Printf("From: %s", sender)
+		log.Printf("BCC: %v", addrs)
+		log.Printf("Subject: %s", subject)
+		log.Printf("Body:\n%s", body)
 	*/
 	return nil
 }

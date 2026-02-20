@@ -13,10 +13,11 @@
                         <td><input id="location" name="location" type="text" value="{{ .Profile.DefaultLocation }}" /></td></tr>
                     <tr><th><label for="nag">Get an email if gamenight needs scheduling?</label></th>
                         <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} />{{ if eq .Highlight "reminder" }} <span class="label-success"><===</span>{{ end }}</td></tr>
-                    <tr><th><label for="invite">Get invited to new gamenights on the calendar?</label></th>
-                        <td><input type="checkbox" name="invite" id="invite" {{ if .Profile.Invite }} checked="checked" {{ end }} /></td></tr>
                     <tr><th><label for="notify">Get an email when a gamenight is scheduled?</label></th>
                         <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} />{{ if eq .Highlight "sched" }} <span class="label-success"><===</span>{{ end }}</td></tr>
+                    <tr><th><label for="invite">Get invited to new gamenights on the calendar?</label></th>
+                        <td><input type="checkbox" name="invite" id="invite" {{ if .Profile.Invite }} checked="checked" {{ end }} /></td></tr>
+                    <tr><td></td><td><span class="span4">Note: For stupid reasons, the invite <em>subject</em> lists the time in UTC. The body of the email, and the actual calendar entry do show the local time. I'm trying to fix the subject, but it might not actually be possible.</span></td></tr>
                 {{ if .Base.User.Superuser }}
                     <tr><th>
                         <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />

@@ -23,6 +23,11 @@ func tz() *time.Location {
 }
 
 func config(ctx context.Context, id string) string {
+	if stageInstance && !strings.Contains(id, "_stage") {
+		if cfg := config(ctx, id+"_stage"); cfg != "" {
+			return cfg
+		}
+	}
 	cQ := datastore.NewQuery("Config").FilterField("n", "=", id)
 	var cfgs []Config
 	_, err := dsClient.GetAll(ctx, cQ, &cfgs)
@@ -45,29 +50,6 @@ func getAllUsers(ctx context.Context) ([]User, error) {
 		return nil, fmt.Errorf("Error querying users: %v", err)
 	}
 	return users, nil
-}
-
-func loggedIn(w http.ResponseWriter, r *http.Request) (*User, error) {
-	ctx := r.Context()
-	email := r.Header.Get("X-Appengine-User-Email")
-	if email == "" {
-		http.Redirect(w, r, "/_ah/login?continue="+r.URL.Path, http.StatusFound)
-		return nil, fmt.Errorf("Not logged in")
-	}
-
-	user, err := getUser(ctx, email)
-	if err != nil {
-		log.Printf("Error fetching user %s: %v", email, err)
-		http.Error(w, "Error fetching user", http.StatusInternalServerError)
-		return nil, fmt.Errorf("Error fetching user")
-	}
-	/* For initializing users in the dev environment.
-	if email == "gamenight@peeron.com" {
-		user.Superuser = true
-	}
-	*/
-
-	return user, nil
 }
 
 func getUser(ctx context.Context, email string) (*User, error) {
@@ -133,6 +115,7 @@ func getNextGamenight(ctx context.Context) (*Gamenight, error) {
 	now := time.Now().In(tz())
 	q := datastore.NewQuery("Gamenight").
 		FilterField("d", ">=", now.AddDate(0, 0, -1)).
+		FilterField("s", "=", "Yes").
 		Order("d").
 		Limit(1)
 	var gns []Gamenight

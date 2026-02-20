@@ -23,13 +23,8 @@ type ScheduleData struct {
 }
 
 func handleSchedule(w http.ResponseWriter, r *http.Request) {
-	user, err := loggedIn(w, r)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-
     ctx := r.Context()
+	user, _ := getUserSession(ctx, r)
 
 	data := ScheduleData{
 		Base: BaseTemplate{

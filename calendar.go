@@ -33,21 +33,21 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 	when = when.In(tz())
 
 	midnight := time.Date(when.Year(), when.Month(), when.Day(), 0, 0, 0, 0, tz()).
-	    AddDate(0, 0, 1).
+		AddDate(0, 0, 1).
 		Format(time.RFC3339)
 	var invs []*calendar.EventAttendee
 	for _, u := range invite {
 		invs = append(invs, &calendar.EventAttendee{
 			DisplayName: u.Name,
-			Email: u.Email(),
+			Email:       u.Email(),
 		})
 	}
 	e := &calendar.Event{
 		AttendeesOmitted: true,
-		Attendees: invs,
+		Attendees:        invs,
 		Creator: &calendar.EventCreator{
 			DisplayName: "Gamenight!",
-			Self: true,
+			Self:        true,
 		},
 		Description: notes,
 		End: &calendar.EventDateTime{
@@ -61,7 +61,7 @@ func (s *calSvc) Add(ctx context.Context, when time.Time, location, notes string
 		},
 		Summary: "Gamenight: YES",
 	}
-	event, err := s.Events.Insert(s.calendarID, e).Do()
+	event, err := s.Events.Insert(s.calendarID, e).SendUpdates("all").Do()
 	if err != nil {
 		log.Printf("Error creating event %#v: %v", e, err)
 		return "", fmt.Errorf("Failed to create event: %v", err)

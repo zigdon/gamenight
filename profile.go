@@ -91,18 +91,15 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 }
 
 func handleProfile(w http.ResponseWriter, r *http.Request) {
-	user, err := loggedIn(w, r)
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
+	ctx := r.Context()
+	user, _ := getUserSession(ctx, r)
 
 	data := &ProfileData{
 		Profile: user,
 		Base: BaseTemplate{
 			Tab: "profile",
 			User: user,
-			DevServer: devServer(r.Context()),
+			DevServer: devServer(ctx),
 		},
 	}
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
@@ -119,7 +116,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		err = updateProfile(r, data, user)
+		err := updateProfile(r, data, user)
 		if err != nil {
 			if data.Base.Error == "" {
 				data.Base.Error = "Internal error"
@@ -162,8 +159,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 		data.Users = users
 	}
 
-	err = tmpl.ExecuteTemplate(w, "profile.html", data)
-	if err != nil {
+	if err := tmpl.ExecuteTemplate(w, "profile.html", data); err != nil {
 		log.Printf("Error executing profile.html: %v", err)
 	}
 }
