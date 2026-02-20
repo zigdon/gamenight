@@ -16,10 +16,11 @@ import (
 )
 
 var (
-	dsClient *datastore.Client
-	svc *calSvc
-	sm *secretmanager.Client
-	sessionStore *sessions.CookieStore
+	dsClient      *datastore.Client
+	svc           *calSvc
+	sm            *secretmanager.Client
+	sessionStore  *sessions.CookieStore
+	stageInstance = false
 )
 
 func initThings(ctx context.Context) error {
@@ -45,10 +46,10 @@ func initThings(ctx context.Context) error {
 	sessionStore = sessions.NewCookieStore([]byte(getSecret(ctx, "cookie_key")))
 	sessionStore.Options = &sessions.Options{
 		Path:     "/",
-        MaxAge:   86400 * 7, // 7 days
-        HttpOnly: true,      // Prevents JavaScript access (XSS protection)
-        Secure:   true,      // Only sent over HTTPS
-        SameSite: http.SameSiteLaxMode,
+		MaxAge:   86400 * 7, // 7 days
+		HttpOnly: true,      // Prevents JavaScript access (XSS protection)
+		Secure:   true,      // Only sent over HTTPS
+		SameSite: http.SameSiteLaxMode,
 	}
 
 	return nil
@@ -75,6 +76,10 @@ func main() {
 		http.HandleFunc("/debug", handleDebug)
 	}
 
+	if os.Getenv("STAGING") != "" {
+		stageInstance = true
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -86,10 +91,10 @@ func main() {
 }
 
 func mkDefault() Gamenight {
-	// Before tuesday, say probably. 
+	// Before tuesday, say probably.
 	// Before friday, say maybe.
 	// Then say no.
-	switch (time.Now().In(tz()).Weekday()) {
+	switch time.Now().In(tz()).Weekday() {
 	case time.Sunday, time.Monday, time.Tuesday:
 		return Gamenight{Status: "Probably"}
 	case time.Wednesday, time.Thursday, time.Friday:
@@ -100,16 +105,16 @@ func mkDefault() Gamenight {
 }
 
 type Future struct {
-	Type string
-	When time.Time
+	Type     string
+	When     time.Time
 	Location string
-	Owner string
+	Owner    string
 }
 
 type IndexData struct {
-	Current Gamenight
-	Future []Future
-	Updated time.Time
+	Current    Gamenight
+	Future     []Future
+	Updated    time.Time
 	CalendarID string
 }
 
@@ -118,11 +123,11 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	var sched Gamenight
 	now := time.Now().In(tz())
 	// Sunday 00:00
-	sun := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz()).AddDate(0,0,int(7-now.Weekday()))
+	sun := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz()).AddDate(0, 0, int(7-now.Weekday()))
 	found := make(map[string]bool)
 	it := dsClient.Run(ctx, datastore.NewQuery("Gamenight").
 		FilterField("s", "=", "Yes").
-		FilterField("d", ">", now.AddDate(0 ,0 ,-1)).
+		FilterField("d", ">", now.AddDate(0, 0, -1)).
 		FilterField("d", "<", sun).
 		Order("d"))
 
@@ -158,15 +163,15 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Error filling gn: %v", err)
 		}
 		days = append(days, Future{
-			Type: "gamenight",
-			When: gn.When(),
+			Type:     "gamenight",
+			When:     gn.When(),
 			Location: gn.Location,
-			Owner: gn.GetOwner().Name,
+			Owner:    gn.GetOwner().Name,
 		})
 		found[fmt.Sprintf("%s@%s", gn.GetOwner().Name, gn.When())] = true
 	}
 
-    invs, err := getAllInvitations(ctx, now, true)
+	invs, err := getAllInvitations(ctx, now, true)
 	if err != nil {
 		log.Printf("Error getting invitations: %v", err)
 	}
@@ -178,17 +183,17 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		days = append(days, Future{
-			Type: "invite",
-			When: inv.When(),
+			Type:     "invite",
+			When:     inv.When(),
 			Location: inv.Location,
-			Owner: inv.GetOwner().Name,
+			Owner:    inv.GetOwner().Name,
 		})
 	}
 
 	var data = IndexData{
-		Current: sched,
-		Future: days,
-		Updated: now,
+		Current:    sched,
+		Future:     days,
+		Updated:    now,
 		CalendarID: config(ctx, "calendar_id"),
 	}
 	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/index.html"))

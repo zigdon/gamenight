@@ -23,6 +23,11 @@ func tz() *time.Location {
 }
 
 func config(ctx context.Context, id string) string {
+	if stageInstance && !strings.Contains(id, "_stage") {
+		if cfg := config(ctx, id+"_stage"); cfg != "" {
+			return cfg
+		}
+	}
 	cQ := datastore.NewQuery("Config").FilterField("n", "=", id)
 	var cfgs []Config
 	_, err := dsClient.GetAll(ctx, cQ, &cfgs)
@@ -110,6 +115,7 @@ func getNextGamenight(ctx context.Context) (*Gamenight, error) {
 	now := time.Now().In(tz())
 	q := datastore.NewQuery("Gamenight").
 		FilterField("d", ">=", now.AddDate(0, 0, -1)).
+		FilterField("s", "=", "Yes").
 		Order("d").
 		Limit(1)
 	var gns []Gamenight

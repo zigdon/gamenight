@@ -1,6 +1,6 @@
 package main
 
-import(
+import (
 	"context"
 	"fmt"
 	"html/template"
@@ -9,13 +9,25 @@ import(
 	"strings"
 
 	"cloud.google.com/go/datastore"
-    smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"google.golang.org/api/idtoken"
 )
 
 const projectID = 474756814972
 
 func getSecret(ctx context.Context, key string) string {
+	if stageInstance {
+		req := &smpb.AccessSecretVersionRequest{
+			Name: fmt.Sprintf("projects/%d/secrets/%s_staging/versions/latest", projectID, key),
+		}
+
+		res, err := sm.AccessSecretVersion(ctx, req)
+		if err == nil {
+			log.Printf("Using staging value for %q", key)
+			return string(res.Payload.Data)
+		}
+		log.Printf("No staging value for %q", key)
+	}
 	req := &smpb.AccessSecretVersionRequest{
 		Name: fmt.Sprintf("projects/%d/secrets/%s/versions/latest", projectID, key),
 	}
@@ -37,24 +49,24 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-    token := r.Header.Get("X-ID-TOKEN")
-    if token == "" {
-        http.Error(w, "Missing token", http.StatusBadRequest)
-        return
-    }
+	token := r.Header.Get("X-ID-TOKEN")
+	if token == "" {
+		http.Error(w, "Missing token", http.StatusBadRequest)
+		return
+	}
 
-    aud := getSecret(ctx, "client_id")
-    
-    payload, err := idtoken.Validate(ctx, token, aud)
-    if err != nil {
+	aud := getSecret(ctx, "client_id")
+
+	payload, err := idtoken.Validate(ctx, token, aud)
+	if err != nil {
 		log.Printf("Invalid token: %v", err)
-        http.Error(w, "Invalid Token", http.StatusUnauthorized)
-        return
-    }
+		http.Error(w, "Invalid Token", http.StatusUnauthorized)
+		return
+	}
 
-    email := payload.Claims["email"].(string)
+	email := payload.Claims["email"].(string)
 
-    log.Printf("Authenticated user %s", email)
+	log.Printf("Authenticated user %s", email)
 
 	session, _ := sessionStore.Get(r, "session")
 	session.Values["authed"] = true
@@ -77,7 +89,9 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dest := r.FormValue("dest")
-	if dest == "" { dest = "/" }
+	if dest == "" {
+		dest = "/"
+	}
 
 	u, err := getUserSession(ctx, r)
 	if err != nil {
@@ -103,17 +117,17 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Logging out %v", session.Values["id"])
 
 	// Delete the cookie, and also invalidate it.
-    session.Options.MaxAge = -1
-    session.Values["authenticated"] = false
+	session.Options.MaxAge = -1
+	session.Values["authenticated"] = false
 
-    err := session.Save(r, w)
-    if err != nil {
-        http.Error(w, "Failed to logout", http.StatusInternalServerError)
-        return
-    }
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, "Failed to logout", http.StatusInternalServerError)
+		return
+	}
 
-    // Redirect back to home or login page
-    http.Redirect(w, r, "/", http.StatusFound)
+	// Redirect back to home or login page
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func getUserSession(ctx context.Context, r *http.Request) (*User, error) {
@@ -153,22 +167,22 @@ func getUserSession(ctx context.Context, r *http.Request) (*User, error) {
 
 func loginFunc(path string, next http.HandlerFunc) {
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-        session, err := sessionStore.Get(r, "session")
+		session, err := sessionStore.Get(r, "session")
 		if err != nil {
 			log.Printf("Error reading cookie: %v", err)
 		}
 
-        if auth, ok := session.Values["authed"].(bool); !ok || !auth {
-            http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
-            return
-        }
-        next.ServeHTTP(w, r)
+		if auth, ok := session.Values["authed"].(bool); !ok || !auth {
+			http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
+			return
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
 func adminFunc(path string, next http.HandlerFunc) {
 	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-        session, _ := sessionStore.Get(r, "session")
+		session, _ := sessionStore.Get(r, "session")
 
 		if r.Header.Get("X-Appengine-Cron") == "true" {
 			log.Printf("Authorized request from cron")
@@ -176,16 +190,16 @@ func adminFunc(path string, next http.HandlerFunc) {
 			return
 		}
 
-        if auth, ok := session.Values["authed"].(bool); !ok || !auth {
-            http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
-            return
-        }
+		if auth, ok := session.Values["authed"].(bool); !ok || !auth {
+			http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
+			return
+		}
 
 		if u, _ := getUserSession(r.Context(), r); u == nil || !u.Superuser {
 			log.Printf("Admin required for %q", path)
-            http.Redirect(w, r, "/", http.StatusFound)
-            return
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
 		}
-        next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	})
 }
