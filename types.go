@@ -216,6 +216,7 @@ type Invitation struct {
 
 	OwnerKey  *datastore.Key `datastore:"o"`
 	Scheduled *Gamenight
+	Relative string
 }
 
 func (i *Invitation) Schedule(ctx context.Context) error {
@@ -313,6 +314,21 @@ func (i *Invitation) Load(ctx context.Context) error {
 	// Convert the time into localtime, because timezone are the WORST.
 	i.Date = i.Date.In(tz())
 	i.Time = i.Time.In(tz())
+	// Calculate the relative date.
+	sameDay := func(a, b time.Time) bool {
+		return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
+	}
+	now := time.Now().In(tz())
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz())
+	tomorrow := today.AddDate(0, 0, 1)
+	if sameDay(i.Date, today) {
+		i.Relative = "Today"
+	} else if sameDay(i.Date, tomorrow) {
+		i.Relative = "Tomorrow"
+	} else {
+		delta := time.Until(i.Date).Hours()/24
+		i.Relative = fmt.Sprintf("In %d days", int(delta))
+	}
 	return nil
 }
 

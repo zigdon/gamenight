@@ -196,6 +196,13 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		Checks: make(map[string]string),
 	}
 
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
+		return
+	}
+	log.Printf("%v", r.Form)
+
 	// Parse any warnings from the query
 	// wd - weekday
 	// hr - hour
@@ -220,12 +227,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if r.Method == http.MethodPost {
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
-			return
-		}
-
 		if (r.FormValue("withdraw") != "") {
 			if err := withdrawInvite(r, data, user); err != nil {
 				log.Printf("Error withdrawing invitation: %v", err)

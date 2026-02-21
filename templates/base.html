@@ -1,78 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<title>{{ template "Title" }}</title>
-<link type="text/css" rel="stylesheet" href="/resources/main.css" />
-<link type="text/css" rel="stylesheet"
-  href="/resources/bootstrap/css/bootstrap.css" />
-<script src="//code.jquery.com/jquery.js"></script>
-<script src="/resources/bootstrap/js/bootstrap.min.js"></script>
-</head>
-<body>
-<div class="container-fluid">
-    <div class="row-fluid">
-        <div class="span12">
-            <div class="navbar">
-                <div class="navbar-inner">
-                    <div class="container-fluid">
-                         <a data-target=".navbar-responsive-collapse" data-toggle="collapse" class="btn btn-navbar"><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></a> <a href="#" class="brand"></a>
-                        <div class="nav-collapse collapse navbar-responsive-collapse">
-                            <ul class="nav">
-                                    <li><a href="/">Home</a></li>
-                                    <li {{ if eq .Base.Tab "invite" }}class="active"{{ end }}>
-                                        <a href="/invite">Invitations</a></li>
-                                    <li {{ if eq .Base.Tab "schedule" }}class="active"{{ end }}>
-                                        <a href="/schedule">Schedule</a></li><br />
-                                </ul>
-                                <ul class="nav pull-right">
-                                    {{ if .Base.User.Superuser }}
-                                        <li class="dropdown{{ if eq .Base.Tab "admin" }} active{{ end }}">
-                                            <a data-toggle="dropdown" class="dropdown-toggle" href="#">Admin<strong class="caret"></strong></a>
-                                            <ul class="dropdown-menu">
-                                                <li{{ if eq .Base.Subtab "config" }} class="active"{{ end }}><a href="/config">Configuration</a></li>
-                                                <li><a href="/tasks/schedule">Schedule</a></li>
-                                                <li><a href="/tasks/nag?email=first">Send first nag email</a></li>
-                                                <li><a href="/tasks/nag?email=second">Send second nag email</a></li>
-                                                {{ if .Base.DevServer }}<li><a href="/debug">debug data</a></li>{{ end }}
-                                            </ul>
-                                        </li>
-                                    {{ end }}
-                                    <li class="divider-vertical"></li>
-                                    <li class="dropdown{{ if eq .Base.Tab "profile" }} active{{ end }}">
-                                         <a data-toggle="dropdown" class="dropdown-toggle" href="#">{{ .Base.User.Name }}<strong class="caret"></strong></a>
-                                        <ul class="dropdown-menu">
-                                            <li {{ if eq .Base.Tab "profile" }}class="active"{{ end }}>
-                                                <a href="/profile">Profile{{ if .Base.User.Superuser }} and users{{ end }}</a>
-                                            </li>
-                                            <li>
-                                                <a href="/auth/logout">Log out</a>
-                                            </li>
-                                        </ul>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ template "Title" }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="/resources/main.css">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+      <div class="container-fluid">
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" href="/">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link{{ if eq .Base.Tab "invite" }} active" aria-current="page{{ end }}" href="/invite">Invite</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link{{ if eq .Base.Tab "schedule" }} active" aria-current="page{{ end }}" href="/schedule">Schedule</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav">
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "admin" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Admin
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item{{ if eq .Base.Subtab "config" }} active" aria-current="item{{ end }}" href="/config">Configuration</a></li>
+                <li><a class="dropdown-item" href="/tasks/schedule">Schedule</a></li>
+                <li><a class="dropdown-item" href="/tasks/nag?email=first">Send first email</a></li>
+                <li><a class="dropdown-item" href="/tasks/nag?email=second">Send second email</a></li>
+                <li><a class="dropdown-item" href="/debug">Debug</a></li>
+              </ul>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "profile" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                User
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item{{ if eq .Base.Tab "profile" }} active" aria-current="item{{ end }}" href="/profile">Profile</a></li>
+                <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+              </ul>
+            </li>
+          </ul>
         </div>
-        {{ if .Base.Error }}
-            <div class="alert">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <h4>Message</h4>
-                {{ .Base.Error }}
-            </div>
-        {{ end }}
-        {{ if .Base.Msg }}
-            <div class="alert-info">
-                <button type="button" class="close" data-dismiss="alert">×</button>
-                <h4>Message</h4>
-                {{ .Base.Msg }}
-            </div>
-        {{ end }}
-        {{ block "Content" . }}Content not loaded!{{ end }}
-    </div>
-</body>
-{{/* vim: set ts=4 sts=4 sw=4 et: */}}
-</html>
+      </div>
+    </nav>
 
+    {{ block "Content" . }}Content not loaded!{{ end }}
+
+    <footer class="footer mt-auto py-3 bg-light">
+      <div class="container">
+        <span class="text-muted">Place sticky footer content here.</span>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="/resources/script.js"></script>
+  </body>
+</html>
