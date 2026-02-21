@@ -102,7 +102,8 @@ type Gamenight struct {
 	InviteKey   *datastore.Key `datastore:"a"`
 	OwnerKey    *datastore.Key `datastore:"o"`
 
-	EventDetails *calendar.Event
+	EventDetails *calendar.Event `datastore:"-"`
+	Relative string `datastore:"-"`
 }
 
 func (g Gamenight) GetOwner() *User {
@@ -215,8 +216,8 @@ type Invitation struct {
 	Owner    *User
 
 	OwnerKey  *datastore.Key `datastore:"o"`
-	Scheduled *Gamenight
-	Relative string
+	Scheduled *Gamenight    `datastore:"-"`
+	Relative string         `datastore:"-"`
 }
 
 func (i *Invitation) Schedule(ctx context.Context) error {
@@ -390,6 +391,7 @@ type invLoader struct {
 	// unused?
 	Owner     *User
 	Scheduled *Gamenight
+	Relative string
 }
 
 func (il invLoader) Convert() Invitation {

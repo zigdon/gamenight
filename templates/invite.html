@@ -4,24 +4,24 @@
   <div class="row">
     <div class="col-md-8">
       <h2>Schedule a Gamenight</h2>
-      <form method="POST">
+      <form method="POST" action="/invite">
         <div class="mb-3">
           <label for="when" class="form-label">When</label>
-          <input type="text" class="form-control" id="when"
+          <input type="text" class="form-control" id="when" name="when"
               placeholder="10/20, 8pm; Oct 20, 7:30pm" value="{{ .When }}">
         </div>
         <div class="mb-3">
           <label for="where" class="form-label">Where</label>
-          <input type="text" class="form-control" id="where"
+          <input type="text" class="form-control" id="where" name="where"
               placeholder="My house" value="{{ .Where }}">
         </div>
         <div class="mb-3">
           <label for="notes" class="form-label">Notes</label>
-          <input type="text" class="form-control" id="notes" value="{{ .Notes }}">
+          <input type="text" class="form-control" id="notes" name="notes" value="{{ .Notes }}">
         </div>
         <div class="mb-3">
           <label for="preference" class="form-label">Preference</label>
-          <select class="form-select" id="preference">
+          <select class="form-select" id="preference" name="preference">
             <option selected value="Can">Happy to host</option>
             <option value="Want">Want to host</option>
             <option value="Insist">Would really like to host</option>
@@ -33,7 +33,6 @@
     <div class="col-md-4">
       <h2>Pending Invitations</h2>
       {{- if .Invitations }}
-      <form method="POST">
       <div class="list-group">
         {{- range $invite := .Invitations }}
         <div class="d-flex w-100 justify-content-between align-items-center">
@@ -41,8 +40,10 @@
           <div>
             {{- if $invite.Relative }}<small>{{ $invite.Relative }}</small>{{ end }}
             {{- if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
-            <button type="button" class="btn-close ms-2" name="{{ $invite.Key.ID }}"
-                aria-label="Withdraw"></button>
+            <form method="POST" action="/invite" style="display:inline;">
+              <input type="hidden" name="withdrawID" value="{{ $invite.Key.ID }}">
+              <button type="submit" class="btn-close ms-2" aria-label="Withdraw"></button>
+            </form>
             {{- end }}
           </div>
         </div>
@@ -55,7 +56,6 @@
         </p>
         {{- end }}
       </div>
-      </form>
       {{- else }}
       <p class="mb-1">No invitations yet.</p>
       {{- end }}

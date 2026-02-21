@@ -50,6 +50,19 @@
       </div>
     </nav>
 
+    <div class="container mt-3">
+      {{ with .Base.Msg }}
+      <div class="alert alert-success" role="alert">
+        {{ . }}
+      </div>
+      {{ end }}
+      {{ with .Base.Error }}
+      <div class="alert alert-danger" role="alert">
+        {{ . }}
+      </div>
+      {{ end }}
+    </div>
+
     {{ block "Content" . }}Content not loaded!{{ end }}
 
     <footer class="footer mt-auto py-3 bg-light">

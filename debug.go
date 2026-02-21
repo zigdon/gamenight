@@ -29,11 +29,7 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 			out("Can't parse %q: %v", r.FormValue("key"), err)
 		}
 		key := datastore.IDKey(t, int64(id), nil)
-		var gn Gamenight
-		err = dsClient.Get(ctx, key, &gn)
-		if err != nil {
-			out("Error loading %v to delete: %v", key, err)
-		} else if err := dsClient.Delete(ctx, key); err != nil {
+		if err := dsClient.Delete(ctx, key); err != nil {
 			out("Error deleting %v: %v", key, err)
 		} else {
 			out("Deleted %v", key)
