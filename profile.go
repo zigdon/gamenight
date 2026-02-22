@@ -75,9 +75,11 @@ func updateProfile(ctx context.Context, r *http.Request, data *ProfileData, user
 	}
 
 	if len(changes) > 0 {
-		log.Printf("Changes to %s:\n", profile.ID.Name)
-		for _, c := range changes {
-			log.Print(c)
+		if devServer(ctx) {
+			log.Printf("Changes to %s:\n", profile.ID.Name)
+			for _, c := range changes {
+				log.Print(c)
+			}
 		}
 
 		_, err := dsClient.Put(ctx, profile.ID, profile)

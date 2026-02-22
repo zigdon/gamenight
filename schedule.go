@@ -75,7 +75,6 @@ func handleSchedule(w http.ResponseWriter, r *http.Request) {
 		tmpl.ExecuteTemplate(w, "schedule.html", data)
 		return
 	}
-	log.Printf("Loaded %d invitations", len(invs))
 	for _, inv := range invs {
 		if err = inv.Load(ctx); err != nil {
 			log.Printf("Error filling invitation: %v", err)

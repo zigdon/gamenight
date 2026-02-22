@@ -66,8 +66,6 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 
 	email := payload.Claims["email"].(string)
 
-	log.Printf("Authenticated user %s", email)
-
 	session, _ := sessionStore.Get(r, "session")
 	session.Values["authed"] = true
 	session.Values["id"] = email
@@ -114,8 +112,6 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 	session, _ := sessionStore.Get(r, "session")
 
-	log.Printf("Logging out %v", session.Values["id"])
-
 	// Delete the cookie, and also invalidate it.
 	session.Options.MaxAge = -1
 	session.Values["authenticated"] = false
@@ -148,7 +144,6 @@ func getUserSession(ctx context.Context, r *http.Request) (*User, error) {
 	}
 	key := datastore.NameKey("User", email, nil)
 	if err := dsClient.Get(ctx, key, user); err != nil {
-		log.Printf("Creating a new user for %q", email)
 		user = &User{
 			ID:   key,
 			Name: strings.Split(email, "@")[0],

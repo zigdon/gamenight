@@ -56,7 +56,6 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
 			return
 		}
-		log.Printf("%v", r.Form)
 		updated := false
 		var rmKeys []*datastore.Key
 		var newConfig *Config

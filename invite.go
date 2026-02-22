@@ -98,9 +98,11 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 	invite.Key = nk
 
-	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
-		nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
-		invite.Location, invite.Priority)
+	if devServer(ctx) {
+		log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
+			nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
+			invite.Location, invite.Priority)
+	}
 	
 	data.ParsedTime = parsedTime // Store parsed time in data struct
 	suf := "th"
@@ -200,8 +202,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
 		return
 	}
-	log.Printf("%v", r.Form)
-
 	// Parse any warnings from the query
 	// wd - weekday
 	// hr - hour
@@ -251,6 +251,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 
         // Redirect to clear form
 		params := []string{"/invite?msg="+url.QueryEscape(data.Base.Msg)}
+		// TODO: make sure these work in the new templates
 		for k, v := range data.Checks {
 			params = append(params, k+"="+url.QueryEscape(v))
 		}

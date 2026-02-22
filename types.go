@@ -138,7 +138,6 @@ func (g *Gamenight) CreateEvent(ctx context.Context) error {
 		return err
 	}
 	g.EventID = eid
-	log.Printf("Created event: %s", eid)
 	if err := g.Save(ctx); err != nil {
 		return fmt.Errorf("Failed to update gamenight: %v", err)
 	}
@@ -150,7 +149,6 @@ func (g *Gamenight) RemoveEvent(ctx context.Context) error {
 	if err := svc.Remove(ctx, g.EventID); err != nil {
 		return err
 	}
-	log.Printf("Removed event %q", g.EventID)
 	g.EventID = ""
 	return nil
 }
