@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"log"
@@ -14,12 +15,11 @@ type ProfileData struct {
 	Highlight string
 }
 
-func updateProfile(r *http.Request, data *ProfileData, user *User) error {
-	ctx := r.Context()
+func updateProfile(ctx context.Context, r *http.Request, data *ProfileData, user *User) error {
 	form := r.Form
 	var id string
-	if user.Superuser && len(form["pid"]) > 0 {
-		id = form["pid"][0]
+	if user.Superuser && len(form["edit"]) > 0 {
+		id = form["edit"][0]
 	} else {
 		id = user.ID.Name
 	}
@@ -67,16 +67,19 @@ func updateProfile(r *http.Request, data *ProfileData, user *User) error {
 			fmt.Sprintf("%s: %v -> %v", "Notify", profile.Notify, !profile.Notify))
 		profile.Notify = len(form["notify"]) > 0
 	}
-	if devServer(ctx) && profile.Superuser != (len(form["admin"]) > 0) {
-		changes = append(changes,
-			fmt.Sprintf("%s: %v -> %v", "Admin", profile.Superuser, !profile.Superuser))
-		profile.Superuser = len(form["admin"]) > 0
+	if devServer(ctx) {
+		if !user.Superuser && profile.ID.ID == user.ID.ID {
+			changes = append(changes, "Auto-grant superuser in dev server")
+			profile.Superuser = true
+		}
 	}
 
 	if len(changes) > 0 {
-		log.Print("Changes:\n")
-		for _, c := range changes {
-			log.Print(c)
+		if devServer(ctx) {
+			log.Printf("Changes to %s:\n", profile.ID.Name)
+			for _, c := range changes {
+				log.Print(c)
+			}
 		}
 
 		_, err := dsClient.Put(ctx, profile.ID, profile)
@@ -102,7 +105,9 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 			DevServer: devServer(ctx),
 		},
 	}
-	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/profile.html"))
+	tmpl := template.Must(template.ParseFiles(
+			"templates/base.html",
+			"templates/profile.html"))
 
 	// Parse form data
 	if err := r.ParseForm(); err != nil {
@@ -116,7 +121,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.Method == http.MethodPost {
-		err := updateProfile(r, data, user)
+		err := updateProfile(ctx, r, data, user)
 		if err != nil {
 			if data.Base.Error == "" {
 				data.Base.Error = "Internal error"
@@ -144,14 +149,14 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 	if user.Superuser {
 		pid := r.FormValue("edit")
 		if pid != "" {
-			profile, err := getUser(r.Context(), pid)
+			profile, err := getUser(ctx, pid)
 			if err != nil {
 				log.Printf("Error loading user %q: %v", pid, err)
 				data.Base.Error = "Can't load user"
 			}
 			data.Profile = profile
 		}
-		users, err := getAllUsers(r.Context())
+		users, err := getAllUsers(ctx)
 		if err != nil {
 			log.Print(err)
 			data.Base.Error = "Error querying users"

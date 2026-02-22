@@ -7,3 +7,7 @@ cron:
   url: /tasks/nag?email=second
   schedule: every friday 10:00
   timezone: America/Los_Angeles
+- description: Schedule
+  url: /tasks/schedule
+  schedule: every tuesday,wednesday,thursday,friday 10:00
+  timezone: America/Los_Angeles

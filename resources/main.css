@@ -17,10 +17,11 @@
 }
 
 .footer {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     color: gray;
-    font-size: 80%;
+    width: 100%;
+    z-index: 1030;
 }
 
 a {
@@ -40,7 +41,6 @@ a {
 }
 
 .future {
-    font-size: 80%;
     color: gray;
     position: absolute;
     right: 1%;
@@ -78,4 +78,43 @@ td {
 
 .missing {
     color: red;
+}
+
+.config-value {
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-key {
+  max-width: 10%;
+  white-space: nowrap;
+}
+
+.config-delete {
+  width: 80px;
+  text-align: center;
+}
+
+.highlight {
+  background-color: #fff3cd;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+}
+
+#when-picker-hidden {
+  display: none;
+}
+
+.upcoming-invitations-container {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    padding: 15px;
+    z-index: 1000;
+}
+
+body {
+    padding-bottom: 60px; /* Adjust based on actual footer height */
 }

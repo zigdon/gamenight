@@ -1,93 +1,109 @@
 {{ define "Title" }}Offer to host gamenight{{ end }}
 {{ define "Content" }}
 {{ if .Checks }}
-<div class="container-fluid alert-info">
-    Just checking, your invitation is ...<ul>
-        {{ range $k, $v := .Checks -}}
-            <li> ... for {{ $v }}</li>
-        {{- end }}
-    </ul>
-    Is that right?
-</div>
-{{ end }}
-{{ if .Scheduled }}
-<div class="container-fluid alert-success">
-    Your gamenight has been immeidately scheduled.
-</div>
-{{ end }}
-<form method="post" action="/invite">
-    <div class="row-fluid">
-        <div class="span6">
-            <fieldset>
-                 <legend>Invite Gamenight</legend>
-                 <label for="when">When</label>
-                 <span class="help-block">Date and time.</span>
-                 <input id="when" name="when" type="text" 
-                        placeholder="10/20, 8pm; Oct 20, 7:30pm" value="{{ .When }}" />
-                 <label for="where">Where</label>
-                 <span class="help-block">Name the house, or if people might not know it, specify the address.</span>
-                 <input id="where" name="where" type="text" 
-                        placeholder="My house" value="{{ .Where }}" />
-                 <label for="notes">Notes</label>
-                 <span class="help-block">Anything else you'd like to tell us.</span>
-                 <input id="notes" name="notes" type="text" value="{{ .Notes }}" />
-                 <span class="help-block">How important is it for you to host this time?</span>
-                 <label for="priority">Priority</label>
-                     <select name="priority" id="priority">
-                         <option selected value="Can">Happy to host</option>
-                         <option value="Want">Want to host</option>
-                         <option value="Insist">Would really like to host</option>
-                     </select>
-                 <button type="submit" class="btn">Submit</button>
-            </fieldset>
-        </div>
-        <div class="span6">
-            {{ if .Invitations }}
-                <legend>Current invitations</legend>
-                <ul>
-                    {{ range $invite := .Invitations }}
-                    <li{{ if $invite.Scheduled }} class="scheduled"{{ end }}>
-                            {{ if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
-                              <button type="submit" class="close" name="withdraw" value="{{ $invite.Key.ID }}">x</button>
-                            {{ end }}
-                            {{ if $.Base.User.Superuser }}
-                            {{ if $invite.Owner }}{{ $invite.Owner.Name }}{{ else }}No Owner{{ end }} -
-                            {{ end }}
-                            {{ $invite.When.Format "2006-01-02 3:04pm" }}
-                            @ {{ $invite.Location }} ({{ $invite.PriorityText }})
-                            {{ if $invite.Notes }}
-                                <br /><small>{{ $invite.Notes }}</small>
-                            {{ end }}
-                        </li>
-                    {{ end }}
-                </ul>
-            {{ else }}
-                 <legend>Current invitations</legend>
-                 <p>No invitations at this time.</p>
-            {{ end }}
-            <legend>What does this all mean?</legend>
-            <p>We're trying to make it easier to schedule and know where
-            gamenight is going to be every week, and know earlier when one is
-            scheduled.</p>
-            <p>If you want to host gamenight, please enter when and where you'd
-            like to host, and select how important it is to you to host at that
-            time. The idea is, sometimes you might be saying "I want there to
-            be a gamenight, and I'm happy to volunteer my house for that." Some
-            other times, there's a particular reason you <strong>want</strong>
-            to host gamenight, and you should indicated that.</p>
-            <p>When it's time to schedule a gamenight (usually around Tuesday
-            morning), the system will try to pick the person who wanted to host
-            that week's gamenight most. If no one volunteered to host, it will
-            send out an email to people who have asked for it, suggesting they
-            perhaps host.</p>
-            <p>If you'd like to get that email (only if there are no gamenight
-            invitations for the week), you can opt-in to them in your <a
-            href="/profile?hi=reminder">profile page</a>. On that page you can
-            also select to get an email when a gamenight is scheduled, or to
-            be added to the invite when it is created on the calendar.<p>
-        </div>
+<div class="container mt-3">
+    <div class="alert alert-warning" role="alert">
+      Just checking, your invitation is ...<ul>
+          {{ range $k, $v := .Checks -}}
+              <li> ... for {{ $v }}</li>
+          {{- end }}
+      </ul>
+      Is that right?
     </div>
-</form>
+</div>
+{{ end }}
+<div class="container my-5">
+  <div class="row">
+    <div class="col-md-8">
+      <h2>Schedule a Gamenight</h2>
+      <form method="POST" action="/invite">
+        <div class="mb-3">
+          <label for="when" class="form-label">When</label>
+          <div class="input-group">
+            <input type="text" class="form-control" id="when" name="when"
+                placeholder="10/20, 8pm; Oct 20, 7:30pm" value="{{ .When }}">
+            <input type="hidden" id="when-picker-hidden">
+            <button class="btn btn-outline-secondary" type="button" id="when-picker-toggle">
+              <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="where" class="form-label">Where</label>
+          <input type="text" class="form-control" id="where" name="where"
+              placeholder="My house" value="{{ .Where }}">
+        </div>
+        <div class="mb-3">
+          <label for="notes" class="form-label">Notes</label>
+          <input type="text" class="form-control" id="notes" name="notes" value="{{ .Notes }}">
+        </div>
+        <div class="mb-3">
+          <label for="preference" class="form-label">Preference</label>
+          <select class="form-select" id="preference" name="preference">
+            <option selected value="Can">Happy to host</option>
+            <option value="Want">Want to host</option>
+            <option value="Insist">Would really like to host</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+      </form>
+    </div>
+    <div class="col-md-4">
+      <h2>Pending Invitations</h2>
+      {{- if .Invitations }}
+      <div class="list-group">
+        {{- range $invite := .Invitations }}
+        <div class="d-flex w-100 justify-content-between align-items-center">
+          <h5 class="mb-1">{{ $invite.When.Format "2006-01-02 3:04pm" }}</h5>
+          <div>
+            {{- if $invite.Relative }}<small>{{ $invite.Relative }}</small>{{ end }}
+            {{- if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
+            <form method="POST" action="/invite" style="display:inline;">
+              <input type="hidden" name="withdrawID" value="{{ $invite.Key.ID }}">
+              <button type="submit" class="btn-close ms-2" aria-label="Withdraw"></button>
+            </form>
+            {{- end }}
+          </div>
+        </div>
+        <p class="mb-1">
+          {{- $invite.When.Format "2006-01-02 3:04pm" }}
+          @ {{ $invite.Location }} ({{ $invite.PriorityText }})
+          {{- if $invite.Notes }}
+              <br /><small class="text-muted">{{ $invite.Notes }}</small>
+          {{- end }}
+        </p>
+        {{- end }}
+      </div>
+      {{- else }}
+      <p class="mb-1">No invitations yet.</p>
+      {{- end }}
+      <div class="mt-4">
+        <h5 class="mb-1">What does all this mean?</h5>
+        <p>We're trying to make it easier to schedule and know where gamenight
+        is going to be every week, and know earlier when one is scheduled.</p>
+        <p>If you want to host gamenight, please enter when and where you'd
+        like to host, and select how important it is to you to host at that
+        time. The idea is, sometimes you might be saying "I want there to be a
+        gamenight, and I'm happy to volunteer my house for that." Some other
+        times, there's a particular reason you <strong>want</strong> to host
+        gamenight, and you should indicate that.</p>
+        <p>When it's time to schedule a gamenight (usually around Tuesday
+        morning), the system will try to pick the person who wanted to host
+        that week's gamenight most. If no one volunteered to host, it will send
+        out an email to people who have asked for it, suggesting they perhaps
+        host.</p>
+        <p>If you'd like to get that email (only if there are no gamenight
+        invitations for the week), you can opt-in to them in your
+        <a href="/profile?hi=remind">profile page</a>. <span
+          class="badge bg-success">new!</span> On that page you can also select to
+        <a href="/profile?hi=schedule">get an email</a> when a gamenight is
+        scheduled, or to be <a href="/profile?hi=invite">added to the invite</a>
+        when it is created on the calendar.<p>
+      </div>
+    </div>
+  </div>
+</div>
 {{ end }}
 {{ template "base.html" . }}
-{{/* vim: set ts=4 sts=4 sw=4 et: */}}

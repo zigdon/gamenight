@@ -31,7 +31,7 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	whenStr := r.FormValue("when")
 	whereStr := r.FormValue("where")
 	notesStr := r.FormValue("notes")
-	priorityStr := r.FormValue("priority")
+	priorityStr := r.FormValue("preference")
 
 	data.When = whenStr
 	data.Where = whereStr
@@ -98,9 +98,11 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 	}
 	invite.Key = nk
 
-	log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
-		nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
-		invite.Location, invite.Priority)
+	if devServer(ctx) {
+		log.Printf("Created invitation (%v): from %s for %s @ %s (Priority: %v)",
+			nk, user.Name, invite.When().Format("Mon, Jan 2 15:04"),
+			invite.Location, invite.Priority)
+	}
 	
 	data.ParsedTime = parsedTime // Store parsed time in data struct
 	suf := "th"
@@ -133,10 +135,10 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 }
 
 func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
-	id, err := strconv.Atoi(r.FormValue("withdraw"))
+	id, err := strconv.Atoi(r.FormValue("withdrawID"))
 	if err != nil {
 		data.Base.Error = "Invalid request"
-		return fmt.Errorf("invalid withdraw ID: %v", r.FormValue("withdraw"))
+		return fmt.Errorf("invalid withdraw ID: %v", r.FormValue("withdrawID"))
 	}
 	ctx := r.Context()
 	inv := &Invitation{}
@@ -161,7 +163,6 @@ func withdrawInvite(r *http.Request, data *InviteData, user *User) error {
 		desc := gn.String()
 		if err := gn.Delete(ctx); err != nil {
 			data.Base.Error = "Couldn't delete gamenight event"
-			return fmt.Errorf("Error deleting gamenight %s: %v", desc, err)
 		} else {
 			log.Printf("Deleted gn: %s", desc)
 		}
@@ -196,6 +197,11 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		Checks: make(map[string]string),
 	}
 
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
+		return
+	}
 	// Parse any warnings from the query
 	// wd - weekday
 	// hr - hour
@@ -220,13 +226,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	if r.Method == http.MethodPost {
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
-			return
-		}
-
-		if (r.FormValue("withdraw") != "") {
+		if (r.FormValue("withdrawID") != "") {
 			if err := withdrawInvite(r, data, user); err != nil {
 				log.Printf("Error withdrawing invitation: %v", err)
 				return

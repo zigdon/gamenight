@@ -102,7 +102,8 @@ type Gamenight struct {
 	InviteKey   *datastore.Key `datastore:"a"`
 	OwnerKey    *datastore.Key `datastore:"o"`
 
-	EventDetails *calendar.Event
+	EventDetails *calendar.Event `datastore:"-"`
+	Relative string `datastore:"-"`
 }
 
 func (g Gamenight) GetOwner() *User {
@@ -137,7 +138,6 @@ func (g *Gamenight) CreateEvent(ctx context.Context) error {
 		return err
 	}
 	g.EventID = eid
-	log.Printf("Created event: %s", eid)
 	if err := g.Save(ctx); err != nil {
 		return fmt.Errorf("Failed to update gamenight: %v", err)
 	}
@@ -149,7 +149,6 @@ func (g *Gamenight) RemoveEvent(ctx context.Context) error {
 	if err := svc.Remove(ctx, g.EventID); err != nil {
 		return err
 	}
-	log.Printf("Removed event %q", g.EventID)
 	g.EventID = ""
 	return nil
 }
@@ -215,7 +214,8 @@ type Invitation struct {
 	Owner    *User
 
 	OwnerKey  *datastore.Key `datastore:"o"`
-	Scheduled *Gamenight
+	Scheduled *Gamenight    `datastore:"-"`
+	Relative string         `datastore:"-"`
 }
 
 func (i *Invitation) Schedule(ctx context.Context) error {
@@ -313,6 +313,21 @@ func (i *Invitation) Load(ctx context.Context) error {
 	// Convert the time into localtime, because timezone are the WORST.
 	i.Date = i.Date.In(tz())
 	i.Time = i.Time.In(tz())
+	// Calculate the relative date.
+	sameDay := func(a, b time.Time) bool {
+		return a.Year() == b.Year() && a.Month() == b.Month() && a.Day() == b.Day()
+	}
+	now := time.Now().In(tz())
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz())
+	tomorrow := today.AddDate(0, 0, 1)
+	if sameDay(i.Date, today) {
+		i.Relative = "Today"
+	} else if sameDay(i.Date, tomorrow) {
+		i.Relative = "Tomorrow"
+	} else {
+		delta := time.Until(i.Date).Hours()/24
+		i.Relative = fmt.Sprintf("In %d days", int(delta))
+	}
 	return nil
 }
 
@@ -374,6 +389,7 @@ type invLoader struct {
 	// unused?
 	Owner     *User
 	Scheduled *Gamenight
+	Relative string
 }
 
 func (il invLoader) Convert() Invitation {

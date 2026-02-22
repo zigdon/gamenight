@@ -178,7 +178,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 			found = n
 			break
 		}
-		log.Printf("Failed to parse date %q as %q: %v", timespec, layout, err)
+		// log.Printf("Failed to parse date %q as %q: %v", timespec, layout, err)
 	}
 
 	if found == -1 {

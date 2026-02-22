@@ -1,46 +1,46 @@
 {{ define "Title" }}Upcoming gamenights{{ end }}
 {{ define "Content" }}
-<div class="row-fluid">
-    <div class="span12">
-        {{ range $day := .Days }}
-            <div class="row-fluid">
-                <div class="span12">
-                    <h3 class="muted"> {{ $day.Date }} </h3>
-                    <ul>
-                        {{ if and $day.Scheduled $day.Scheduled.Owner }}{{ with $day.Scheduled }}
-                            <li class="scheduled">
-                                {{ .Owner.Name }}{{if $.Base.User.Superuser }}
-                                    ({{.Owner.Email }})
-                                {{- end }}:
-                                {{ .When.Format "01/02/2006 3:04pm"  }} @ {{ .Location }}
-                                {{ if .Notes }}<br/>{{ .Notes }}{{ end }}
-                                {{ if $.Base.User.Superuser }}
-                                <br/>EventID: <code>{{ .EventID }}</code>
-                                {{ end }}
-                            </li>
-                        {{ end }}{{ else }}
-                            <li>None scheduled</li>
-                        {{ end }}
-                        {{ range $invite := $day.Invitations }}
-                            <li>
-                                {{ $invite.Owner.Name }}{{if $.Base.User.Superuser }}
-                                    ({{.Owner.Email }})
-                                {{- end }}:
-                                {{ $invite.When.Format "01/02/2006 3:04pm"  }}
-                                @ {{ $invite.Location }}
-                                ({{ $invite.PriorityText }})
-                                {{ if $invite.Notes }}: {{ $invite.Notes }}{{ end }}
-                            </li>
-                        {{ end }}
-                    </ul>
-                </div>
-            </div>
-        {{ else }}
-        No gamenights scheduled, perhaps go
-        <a href="/invite">add a new invitation</a>?
-        {{ end }}
+<div class="container my-5">
+  <h2>Upcoming gamenights</h2>
+
+    <div class="card mb-3">
+      {{- range $day := .Days }}
+        <div class="card-header">
+          {{- $day.Date -}}
+        </div>
+        <ul class="list-group list-group-flush">
+          {{- if and $day.Scheduled $day.Scheduled.Owner }}
+            {{- with $day.Scheduled }}
+              <li class="list-group-item">
+                <strong>{{- .When.Format "3:04pm" }} @ {{ .Location }}</strong><br />
+                {{- .Owner.Name }}
+                {{- if $.Base.User.Superuser }}
+                    &lt;{{- .Owner.Email }}&gt;
+                {{- end }}:
+                {{- if .Notes }}<br/>{{ .Notes }}{{ end }}
+                {{- if $.Base.User.Superuser }}
+                  <br/>EventID: <code>{{ .EventID }}</code>
+                {{- end }}
+              </li>
+            {{- end }}
+          {{- end }}
+          {{- range $invite := $day.Invitations }}
+            <li class="list-group-item">
+              <strong>{{- $invite.When.Format "3:04pm" }}
+                @ {{ $invite.Location }}</strong><br />
+              {{- $invite.Owner.Name }}
+              {{- if $.Base.User.Superuser }}
+                &lt;{{- $invite.Owner.Email }}&gt;
+              {{- end }} ({{ $invite.PriorityText }})<br />
+              {{- if $invite.Notes }}<br/>{{ $invite.Notes }}{{ end }}
+            </li>
+          {{- end }}
+        </ul>
+      {{- else }}
+      <strong>No gamenights scheduled, perhaps go
+        <a href="/invite">add a new invitation</a>?</strong>
+      {{- end }}
     </div>
 </div>
-{{ end }}
+{{- end }}
 {{ template "base.html" . }}
-{{/* vim: set ts=4 sts=4 sw=4 et: */}}
