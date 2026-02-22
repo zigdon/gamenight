@@ -251,7 +251,6 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 
         // Redirect to clear form
 		params := []string{"/invite?msg="+url.QueryEscape(data.Base.Msg)}
-		// TODO: make sure these work in the new templates
 		for k, v := range data.Checks {
 			params = append(params, k+"="+url.QueryEscape(v))
 		}

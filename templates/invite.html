@@ -1,5 +1,17 @@
 {{ define "Title" }}Offer to host gamenight{{ end }}
 {{ define "Content" }}
+{{ if .Checks }}
+<div class="container mt-3">
+    <div class="alert alert-warning" role="alert">
+      Just checking, your invitation is ...<ul>
+          {{ range $k, $v := .Checks -}}
+              <li> ... for {{ $v }}</li>
+          {{- end }}
+      </ul>
+      Is that right?
+    </div>
+</div>
+{{ end }}
 <div class="container my-5">
   <div class="row">
     <div class="col-md-8">
