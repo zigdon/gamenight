@@ -22,6 +22,7 @@
           <div class="input-group">
             <input type="text" class="form-control" id="when" name="when"
                 placeholder="10/20, 8pm; Oct 20, 7:30pm" value="{{ .When }}">
+            <input type="hidden" id="when-picker-hidden">
             <button class="btn btn-outline-secondary" type="button" id="when-picker-toggle">
               <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/>
@@ -94,10 +95,12 @@
         out an email to people who have asked for it, suggesting they perhaps
         host.</p>
         <p>If you'd like to get that email (only if there are no gamenight
-        invitations for the week), you can opt-in to them in your <a
-        href="/profile?hi=remind">profile page</a>. On that page you can also
-        select to get an email when a gamenight is scheduled, or to be added to
-        the invite when it is created on the calendar.<p>
+        invitations for the week), you can opt-in to them in your
+        <a href="/profile?hi=remind">profile page</a>. <span
+          class="badge bg-success">new!</span> On that page you can also select to
+        <a href="/profile?hi=schedule">get an email</a> when a gamenight is
+        scheduled, or to be <a href="/profile?hi=invite">added to the invite</a>
+        when it is created on the calendar.<p>
       </div>
     </div>
   </div>

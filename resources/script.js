@@ -2,20 +2,23 @@ document.addEventListener('DOMContentLoaded', function() {
     const pickerToggleButton = document.getElementById("when-picker-toggle");
 
     if (pickerToggleButton) {
-        pickerToggleButton.addEventListener('click', function(event) {
-            event.preventDefault(); // Prevent default button action (form submission)
-        });
-
-        flatpickr(pickerToggleButton, {
+        // Initialize Flatpickr on a hidden input to avoid event conflicts
+        const pickerInstance = flatpickr("#when-picker-hidden", {
             enableTime: true,
             dateFormat: "Y-m-d H:i",
             defaultHour: 18,
-            appendTo: document.body, // Ensure it's appended to the body for better positioning
+            appendTo: document.body,
             onClose: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                     document.getElementById("when").value = dateStr;
                 }
             }
+        });
+
+        // Use the button to toggle the picker instance
+        pickerToggleButton.addEventListener('click', function(event) {
+            event.preventDefault();
+            pickerInstance.toggle();
         });
     }
 

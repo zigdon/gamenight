@@ -103,6 +103,10 @@ td {
   border-radius: .25rem;
 }
 
+#when-picker-hidden {
+  display: none;
+}
+
 .upcoming-invitations-container {
     position: fixed;
     bottom: 30px;

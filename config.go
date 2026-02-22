@@ -136,7 +136,7 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			for k := range data.Updated {
-				data.Updated[k] = "yes"
+				data.Updated[k] = "success"
 			}
 		} else {
 			data.Base.Msg = "No changes detected"
