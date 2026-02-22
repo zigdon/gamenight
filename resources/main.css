@@ -17,10 +17,11 @@
 }
 
 .footer {
-    position: absolute;
+    position: fixed;
     bottom: 0;
     color: gray;
     width: 100%;
+    z-index: 1030;
 }
 
 a {
@@ -127,4 +128,8 @@ td {
     right: 20px;
     padding: 15px;
     z-index: 1000;
+}
+
+body {
+    padding-bottom: 60px; /* Adjust based on actual footer height */
 }
