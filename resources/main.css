@@ -20,6 +20,7 @@
     position: absolute;
     bottom: 0;
     color: gray;
+    width: 100%;
 }
 
 a {
@@ -118,4 +119,12 @@ td {
     border-color: transparent; 
     box-shadow: none; 
   }
+}
+
+.upcoming-invitations-container {
+    position: fixed;
+    bottom: 30px;
+    right: 20px;
+    padding: 15px;
+    z-index: 1000;
 }

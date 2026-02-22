@@ -38,15 +38,17 @@
               </ul>
             </li>
             {{- end }}
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "profile" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ .Base.User.Name }}
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item{{ if eq .Base.Tab "profile" }} active" aria-current="item{{ end }}" href="/profile">Profile</a></li>
-                <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
-              </ul>
-            </li>
+            {{- if .Base.User.Email }}
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "profile" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  {{ .Base.User.Name }}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item{{ if eq .Base.Tab "profile" }} active" aria-current="item{{ end }}" href="/profile">Profile</a></li>
+                  <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+                </ul>
+              </li>
+            {{- end }}
           </ul>
         </div>
       </div>
