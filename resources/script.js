@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
             enableTime: true,
             dateFormat: "Y-m-d H:i",
             defaultHour: 18,
+            appendTo: document.body, // Ensure it's appended to the body for better positioning
             onClose: function(selectedDates, dateStr, instance) {
                 if (selectedDates.length > 0) {
                     document.getElementById("when").value = dateStr;
