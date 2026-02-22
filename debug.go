@@ -24,11 +24,16 @@ func handleDebug(w http.ResponseWriter, r *http.Request) {
 	}
 	if r.FormValue("delete") == "Submit" {
 		t := r.FormValue("type")
-		id, err := strconv.Atoi(r.FormValue("id"))
-		if err != nil {
-			out("Can't parse %q: %v", r.FormValue("key"), err)
+		var key *datastore.Key
+		if t == "User" {
+			key = datastore.NameKey(t, r.FormValue("id"), nil)
+		} else {
+			id, err := strconv.Atoi(r.FormValue("id"))
+			if err != nil {
+				out("Can't parse %q: %v", r.FormValue("key"), err)
+			}
+			key = datastore.IDKey(t, int64(id), nil)
 		}
-		key := datastore.IDKey(t, int64(id), nil)
 		if err := dsClient.Delete(ctx, key); err != nil {
 			out("Error deleting %v: %v", key, err)
 		} else {

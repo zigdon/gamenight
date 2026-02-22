@@ -1,61 +1,67 @@
 {{ define "Title" }}Gamenight host profile{{ end }}
 {{ define "Content" }}
-<div class="row-fluid">
-    <div>
-        <form method="post">
-            <fieldset>
-                <legend>Profile{{ if .Base.User.Superuser }}: {{ .Profile.ID.Name }}{{ end }}</legend>
-                <table>
-                    <tr><th>Email</th><td>{{ .Profile.ID.Name }}</td></tr>
-                    <tr><th><label for="name">Name</label></th>
-                        <td><input id="name" name="name" type="text" value="{{ .Profile.Name }}" /></td></tr>
-                    <tr><th><label for="location">Default location</label></th>
-                        <td><input id="location" name="location" type="text" value="{{ .Profile.DefaultLocation }}" /></td></tr>
-                    <tr><th><label for="nag">Get an email if gamenight needs scheduling?</label></th>
-                        <td><input type="checkbox" name="nag" id="nag" {{ if .Profile.Emails }} checked="checked" {{ end }} />{{ if eq .Highlight "reminder" }} <span class="label-success"><===</span>{{ end }}</td></tr>
-                    <tr><th><label for="notify">Get an email when a gamenight is scheduled?</label></th>
-                        <td><input type="checkbox" name="notify" id="notify" {{ if .Profile.Notify }} checked="checked" {{ end }} />{{ if eq .Highlight "sched" }} <span class="label-success"><===</span>{{ end }}</td></tr>
-                    <tr><th><label for="invite">Get invited to new gamenights on the calendar?</label></th>
-                        <td><input type="checkbox" name="invite" id="invite" {{ if .Profile.Invite }} checked="checked" {{ end }} /></td></tr>
-                    <tr><td></td><td><span class="span4">Note: For stupid reasons, the invite <em>subject</em> lists the time in UTC. The body of the email, and the actual calendar entry do show the local time. I'm trying to fix the subject, but it might not actually be possible.</span></td></tr>
-                {{ if .Base.User.Superuser }}
-                    <tr><th>
-                        <input type="hidden" id="pid" name="pid" value="{{ .Profile.ID.Name }}" />
-                        <label for="admin">Admin</label></th>
-                        <td><input type="checkbox" name="admin" id="admin" {{ if .Profile.Superuser }} checked="checked" {{ end }}{{ if not .Base.DevServer }}disabled="true"{{ end }} /></td></tr>
-                {{ end }}
-                </table>
-                <button type="submit" class="btn">Save</button>
-            </fieldset>
-        </form>
+<div class="container my-5">
+  <h2>{{ .Profile.ID.Name }}
+    {{- if .Profile.Superuser }} <span class="badge bg-primary align-middle">Admin</span>{{ end -}}
+  </h2>
+  <form method="POST" action="/profile">
+    {{- if .Base.User.Superuser }}
+      <input type="hidden" id="edit" name="edit" value="{{ .Profile.ID.Name }}">
+    {{- end }}
+    <div class="mb-3">
+      <label for="email" class="form-label">Email</label>
+      <input type="email" class="form-control" id="email" value="{{ .Profile.ID.Name }}" readonly>
     </div>
-    <div class="span6">
-        {{ if and .Base.User.Superuser .Users }}
-            <form method="get">
-                <legend>Users:</legend>
-                <table width="100%" border=1>
-                    <tr>
-                        <th>Email</th>
-                        <th>Name</th>
-                        <th>Location</th>
-                        <th>Nag emails</th>
-                        <th>Notify emails</th>
-                        <th>Calendar invites</th>
-                    </tr>
-                    {{ range $u := .Users }}
-                    <tr><td>{{ $u.ID.Name }}</td>
-                        <td>{{ $u.Name }}</td>
-                        <td>{{ $u.DefaultLocation }}</td>
-                        <td>{{ if $u.Emails }}✅{{ else }}❌{{ end }}</td>
-                        <td>{{ if $u.Notify }}✅{{ else }}❌{{ end }}</td>
-                        <td>{{ if $u.Invite }}✅{{ else }}❌{{ end }}</td>
-                        <td><button type="submit" class="close" id="edit" name="edit" value="{{ $u.ID.Name }}">edit</button></td>
-                        </tr>
-                    {{ end }}
-                </table>
-        </form>
-        {{ end }}
+    <div class="mb-3">
+      <label for="name" class="form-label">Name</label>
+      <input type="text" class="form-control" id="name" name="name" value="{{ .Profile.Name }}">
     </div>
+    <div class="mb-3">
+      <label for="location" class="form-label">Default Location</label>
+      <input type="text" class="form-control" id="location" name="location" value="{{ .Profile.DefaultLocation }}">
+    </div>
+    <div class="{{ if eq .Highlight "remind" }}highlight{{ end }} mb-3 form-check">
+      <input type="checkbox" {{ if .Profile.Emails }}checked="checked"{{ end }} class="form-check-input" id="nag" name="nag">
+      <label class="form-check-label" for="nag">Email when a gamenight needs scheduling</label>
+    </div>
+    <div class="{{ if eq .Highlight "schedule" }}highlight{{ end }} mb-3 form-check">
+      <input type="checkbox" {{ if .Profile.Notify }}checked="checked"{{ end }} class="form-check-input" id="notify" name="notify">
+      <label class="form-check-label" for="notify">Email me when a gamenight is scheduled</label>
+    </div>
+    <div class="{{ if eq .Highlight "invite" }}highlight{{ end }} mb-3 form-check">
+      <input type="checkbox" {{ if .Profile.Invite }}checked="checked"{{ end }} class="form-check-input" id="invite" name="invite">
+      <label class="form-check-label" for="invite">Add me to the invite for new gamenights</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </form>
+
+  {{ if .Base.User.Superuser -}}
+  <h2 class="mt-5">Other Users</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Needs Scheduling Email</th>
+        <th scope="col">Scheduled Email</th>
+        <th scope="col">Add to New Invites</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{- range $u := .Users }}
+        <tr>
+          <td>{{ $u.Name }}</td>
+          <td>{{ $u.ID.Name }}</td>
+          <td>{{ if $u.Emails }}✅{{ else }}❌{{ end }}</td>
+          <td>{{ if $u.Notify }}✅{{ else }}❌{{ end }}</td>
+          <td>{{ if $u.Invite }}✅{{ else }}❌{{ end }}</td>
+          <td><a class="btn btn-sm btn-secondary" href="/profile?edit={{ $u.ID.Name }}">Edit</a></td>
+        </tr>
+      {{- end }}
+    </tbody>
+  </table>
+  {{- end }}
 </div>
 {{ end }}
 {{ template "base.html" . }}

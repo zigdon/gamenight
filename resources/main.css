@@ -94,3 +94,28 @@ td {
   width: 80px;
   text-align: center;
 }
+
+.highlight {
+  background-color: #fff3cd; /* Light yellow */
+  border: 1px solid transparent; /* Always reserve space for border */
+  border-radius: .25rem;
+  animation: pulse-highlight 2s ease-out forwards;
+}
+
+@keyframes pulse-highlight {
+  0% { 
+    background-color: #fff3cd; 
+    border-color: #ffeeba; 
+    box-shadow: 0 0 0 .25rem rgba(255, 239, 173, .5); /* Subtle glow */
+  }
+  50% { 
+    background-color: #fffacd; 
+    border-color: #fff5e0; 
+    box-shadow: 0 0 0 .3rem rgba(255, 239, 173, .7); 
+  }
+  100% { 
+    background-color: transparent; 
+    border-color: transparent; 
+    box-shadow: none; 
+  }
+}
