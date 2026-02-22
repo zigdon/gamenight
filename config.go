@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"slices"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
@@ -55,30 +56,41 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 			data.Base.Error = fmt.Sprintf("Error parsing form: %v", err)
 			return
 		}
+		log.Printf("%v", r.Form)
 		updated := false
 		var rmKeys []*datastore.Key
-		for k, v := range config {
-			nv := r.FormValue("config_"+v.Name)
-			if nv == "" {
-				log.Printf("Config[%s]: %q removed", v.Name, v.Value)
+		var newConfig *Config
+		if r.FormValue("action") == "add" {
+			for k, v := range config {
+				nv := r.FormValue("config_"+v.Name)
+				if nv != v.Value {
+					log.Printf("Config[%s]: %q -> %q", v.Name, v.Value, nv)
+					updated = true
+					config[k] = &Config{v.Name, nv}
+				}
+			}
+			if nn := r.FormValue("new_name"); nn != "" {
+				newConfig = &Config{
+					Name: nn,
+					Value: r.FormValue("new_value"),
+				}
+				log.Printf("Adding new config: %v", newConfig)
+				updated = true
+			}
+		} else if r.FormValue("action") == "delete" {
+			for k, v := range config {
+				if !slices.Contains(r.Form["deleteKeys"], v.Name) {
+					continue
+				}
 				updated = true
 				rmKeys = append(rmKeys, k)
 				delete(config, k)
-			} else if nv != v.Value {
-				log.Printf("Config[%s]: %q -> %q", v.Name, v.Value, nv)
-				updated = true
-				config[k] = &Config{v.Name, nv}
 			}
+		} else {
+			data.Base.Error = "Unknown action"
+			return
 		}
-		var newConfig *Config
-		if nn := r.FormValue("new_name"); nn != "" {
-			newConfig = &Config{
-				Name: nn,
-				Value: r.FormValue("new_value"),
-			}
-			log.Printf("Adding new config: %v", newConfig)
-			updated = true
-		}
+
 		if updated {
 			tx, err := dsClient.NewTransaction(ctx)
 			if err != nil {

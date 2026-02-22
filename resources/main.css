@@ -77,3 +77,20 @@ td {
 .missing {
     color: red;
 }
+
+.config-value {
+  max-width: 400px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.config-key {
+  max-width: 10%;
+  white-space: nowrap;
+}
+
+.config-delete {
+  width: 80px;
+  text-align: center;
+}
