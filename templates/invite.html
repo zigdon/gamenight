@@ -10,6 +10,11 @@
       </ul>
       Is that right?
     </div>
+    {{- if .Scheduled }}
+    <div class="alert alert-success" role="alert">
+      Your gamenight was immediately scheduled!
+    </div>
+    {{- end }}
 </div>
 {{ end }}
 <div class="container my-5">
