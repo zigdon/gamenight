@@ -10,6 +10,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	smpb "cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
+	"github.com/gorilla/csrf"
 	"google.golang.org/api/idtoken"
 )
 
@@ -102,6 +103,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]string{
+		"csrfToken": csrf.Token(r),
 		"ClientID": getSecret(ctx, "client_id"),
 		"Redirect": dest,
 	}
@@ -160,23 +162,23 @@ func getUserSession(ctx context.Context, r *http.Request) (*User, error) {
 	return user, nil
 }
 
-func loginFunc(path string, next http.HandlerFunc) {
-	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+func loginFunc(next http.HandlerFunc) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		session, err := sessionStore.Get(r, "session")
 		if err != nil {
 			log.Printf("Error reading cookie: %v", err)
 		}
 
 		if auth, ok := session.Values["authed"].(bool); !ok || !auth {
-			http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
+			http.Redirect(w, r, "/auth/login?dest="+r.URL.Path, http.StatusFound)
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
+	}
 }
 
-func adminFunc(path string, next http.HandlerFunc) {
-	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+func adminFunc(next http.HandlerFunc) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		session, _ := sessionStore.Get(r, "session")
 
 		if r.Header.Get("X-Appengine-Cron") == "true" {
@@ -186,15 +188,15 @@ func adminFunc(path string, next http.HandlerFunc) {
 		}
 
 		if auth, ok := session.Values["authed"].(bool); !ok || !auth {
-			http.Redirect(w, r, "/auth/login?dest="+path, http.StatusFound)
+			http.Redirect(w, r, "/auth/login?dest="+r.URL.Path, http.StatusFound)
 			return
 		}
 
 		if u, _ := getUserSession(r.Context(), r); u == nil || !u.Superuser {
-			log.Printf("Admin required for %q", path)
+			log.Printf("Admin required for %q", r.URL.Path)
 			http.Redirect(w, r, "/", http.StatusFound)
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"github.com/gorilla/csrf"
 )
 
 // New type for InviteData to include messages and form values for re-rendering
@@ -25,6 +26,7 @@ type InviteData struct {
 	Checks      map[string]string
 	ParsedTime  time.Time
 	Scheduled   bool
+	CsrfField   template.HTML
 }
 
 func createInvite(r *http.Request, data *InviteData, user *User) error {
@@ -196,6 +198,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		Invitations: invs,
 		Checks: make(map[string]string),
 		Where: user.DefaultLocation,
+		CsrfField: csrf.TemplateField(r),
 	}
 
 	// Parse form data

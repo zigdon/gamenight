@@ -11,6 +11,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/sessions"
 	"google.golang.org/api/iterator"
 )
@@ -61,16 +62,22 @@ func main() {
 		log.Fatalf("Init failed: %v", err)
 	}
 
+	validateCSRF := csrf.Protect(
+		[]byte(getSecret(ctx, "csrf_key")),
+		csrf.Secure(!devServer(ctx)),
+	)
+
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/auth/login", handleLogin)
-	http.HandleFunc("/auth/token", handleToken)
+	http.Handle("POST /auth/token", validateCSRF(http.HandlerFunc(handleToken)))
 	http.HandleFunc("/auth/logout", handleLogout)
-	loginFunc("/invite", handleInvite)
-	loginFunc("/profile", handleProfile)
-	loginFunc("/schedule", handleSchedule)
-	adminFunc("/config", handleConfig)
-	adminFunc("/tasks/nag", handleNag)
-	adminFunc("/tasks/schedule", handleTaskSchedule)
+	http.Handle("/invite", validateCSRF(http.HandlerFunc(loginFunc(handleInvite))))
+	http.Handle("/profile", validateCSRF(http.HandlerFunc(loginFunc(handleProfile))))
+	http.Handle("/schedule",
+	    validateCSRF(http.HandlerFunc(loginFunc(handleSchedule))))
+	http.Handle("/config", validateCSRF(http.HandlerFunc(adminFunc(handleConfig))))
+	http.HandleFunc("/tasks/nag", adminFunc(handleNag))
+	http.HandleFunc("/tasks/schedule", adminFunc(handleTaskSchedule))
 
 	if config(ctx, "devserver") != "" {
 		http.HandleFunc("/debug", handleDebug)

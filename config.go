@@ -8,13 +8,15 @@ import (
 	"slices"
 
 	"cloud.google.com/go/datastore"
+	"github.com/gorilla/csrf"
 	"google.golang.org/api/iterator"
 )
 
 type ConfigData struct {
-	Base BaseTemplate
-	Config map[string]string
-	Updated map[string]string
+	Base      BaseTemplate
+	Config    map[string]string
+	Updated   map[string]string
+	CsrfField template.HTML
 }
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -28,6 +30,7 @@ func handleConfig(w http.ResponseWriter, r *http.Request) {
 		},
 		Config: make(map[string]string),
 		Updated: make(map[string]string),
+		CsrfField: csrf.TemplateField(r),
 	}
 
 	it := dsClient.Run(ctx, datastore.NewQuery("Config"))
