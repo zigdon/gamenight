@@ -195,6 +195,7 @@ func handleInvite(w http.ResponseWriter, r *http.Request) {
 		},
 		Invitations: invs,
 		Checks: make(map[string]string),
+		Where: user.DefaultLocation,
 	}
 
 	// Parse form data

@@ -206,7 +206,7 @@ func parseTimespec(timespec string) (time.Time, error) {
 	}
 
 	if parsedTime.Hour() == 0 {
-		parsedTime = parsedTime.Add(20 * time.Hour)
+		parsedTime = parsedTime.Add(18 * time.Hour)
 	}
 
 	// Default year is this year unless it's in the past
