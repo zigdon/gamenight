@@ -12,6 +12,8 @@ import (
 	"cloud.google.com/go/datastore"
 	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"github.com/gorilla/csrf"
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"google.golang.org/api/iterator"
 )
@@ -36,8 +38,6 @@ func initThings(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Failed to get calendar client: %v", err)
 	}
-	// Only need to do this once:
-	// svc.SetDefaultTZ(ctx)
 
 	sm, err = secretmanager.NewClient(ctx)
 	if err != nil {
@@ -62,39 +62,53 @@ func main() {
 		log.Fatalf("Init failed: %v", err)
 	}
 
-	validateCSRF := csrf.Protect(
-		[]byte(getSecret(ctx, "csrf_key")),
-		csrf.Secure(!devServer(ctx)),
-	)
+	var opts []csrf.Option
 
-	http.HandleFunc("/", handleIndex)
-	http.HandleFunc("/auth/login", handleLogin)
-	http.Handle("POST /auth/token", validateCSRF(http.HandlerFunc(handleToken)))
-	http.HandleFunc("/auth/logout", handleLogout)
-	http.Handle("/invite", validateCSRF(http.HandlerFunc(loginFunc(handleInvite))))
-	http.Handle("/profile", validateCSRF(http.HandlerFunc(loginFunc(handleProfile))))
-	http.Handle("/schedule",
-	    validateCSRF(http.HandlerFunc(loginFunc(handleSchedule))))
-	http.Handle("/config", validateCSRF(http.HandlerFunc(adminFunc(handleConfig))))
-	http.HandleFunc("/tasks/nag", adminFunc(handleNag))
-	http.HandleFunc("/tasks/schedule", adminFunc(handleTaskSchedule))
+	if devServer(ctx) {
+		log.Printf("Appying csrf options for dev environment")
+		opts = append(opts,
+			csrf.TrustedOrigins([]string{"localhost:8080"}),
+			csrf.Secure(false),
+			csrf.ErrorHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// This will print the specific reason the CSRF check failed
+				reason := csrf.FailureReason(r)
+				fmt.Printf("CSRF Failure: %v\n", reason)
 
-	if config(ctx, "devserver") != "" {
-		http.HandleFunc("/debug", handleDebug)
+				http.Error(w, fmt.Sprintf("Forbidden: %v", reason), http.StatusForbidden)
+			})),
+		)
+	}
+	validateCSRF := csrf.Protect([]byte(getSecret(ctx, "csrf_key")), opts...)
+
+	r := mux.NewRouter()
+
+	r.HandleFunc("/", handleIndex)
+	r.HandleFunc("/auth/logout", handleLogout)
+	r.HandleFunc("/schedule", loginFunc(handleSchedule))
+	r.HandleFunc("/tasks/nag", adminFunc(handleNag))
+	r.HandleFunc("/tasks/schedule", adminFunc(handleTaskSchedule))
+	r.HandleFunc("/tos", handleTOS)
+
+	r.Handle("/auth/login", validateCSRF(http.HandlerFunc(handleLogin)))
+	r.Handle("/auth/token", validateCSRF(http.HandlerFunc(handleToken)))
+	r.Handle("/invite", validateCSRF(http.HandlerFunc(loginFunc(handleInvite))))
+	r.Handle("/profile", validateCSRF(http.HandlerFunc(loginFunc(handleProfile))))
+	r.Handle("/config", validateCSRF(http.HandlerFunc(adminFunc(handleConfig))))
+
+	if devServer(ctx) {
+		r.HandleFunc("/debug", handleDebug)
 	}
 
 	if os.Getenv("STAGING") != "" {
 		stageInstance = true
 	}
 
-	http.HandleFunc("/tos", handleTOS)
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	log.Printf("Listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, handlers.ProxyHeaders(r)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -132,7 +146,7 @@ func handleTOS(w http.ResponseWriter, r *http.Request) {
 		Base BaseTemplate
 	}{
 		Base: BaseTemplate{
-			Tab: "",
+			Tab:  "",
 			User: &User{},
 		},
 	}

@@ -67,7 +67,7 @@
             {{- if $invite.Relative }}<small>{{ $invite.Relative }}</small>{{ end }}
             {{- if or ($invite.IsOwner $.Base.User) $.Base.User.Superuser }}
             <form method="POST" action="/invite" style="display:inline;">
-              {{- .CsrfField }}
+              {{- $.CsrfField }}
               <input type="hidden" name="withdrawID" value="{{ $invite.Key.ID }}">
               <button type="submit" class="btn-close ms-2" aria-label="Withdraw"></button>
             </form>
