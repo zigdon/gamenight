@@ -3,6 +3,7 @@
 <div class="container my-5">
   <h2>Configuration</h2>
   <form method="POST" action="/config">
+    {{- .CsrfField }}
     <table class="table table-striped">
       <thead>
         <tr>

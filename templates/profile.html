@@ -5,6 +5,7 @@
     {{- if .Profile.Superuser }} <span class="badge bg-primary align-middle">Admin</span>{{ end -}}
   </h2>
   <form method="POST" action="/profile">
+    {{- .CsrfField }}
     {{- if .Base.User.Superuser }}
       <input type="hidden" id="edit" name="edit" value="{{ .Profile.ID.Name }}">
     {{- end }}

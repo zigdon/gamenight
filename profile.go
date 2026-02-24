@@ -7,12 +7,15 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+
+	"github.com/gorilla/csrf"
 )
 type ProfileData struct {
-	Base    BaseTemplate
-	Profile *User
-	Users   []User
+	Base      BaseTemplate
+	Profile   *User
+	Users     []User
 	Highlight string
+	CsrfField template.HTML
 }
 
 func updateProfile(ctx context.Context, r *http.Request, data *ProfileData, user *User) error {
@@ -104,6 +107,7 @@ func handleProfile(w http.ResponseWriter, r *http.Request) {
 			User: user,
 			DevServer: devServer(ctx),
 		},
+		CsrfField: csrf.TemplateField(r),
 	}
 	tmpl := template.Must(template.ParseFiles(
 			"templates/base.html",
