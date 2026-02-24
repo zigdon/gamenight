@@ -38,14 +38,14 @@ func email(ctx context.Context, emailType emailTemplate, gn *Gamenight) error {
 	case firstNag, secondNag:
 		{
 			pref = emailsPreference
-			data["Unsubscribe"] += "?hi=reminder"
+			data["Unsubscribe"] += "?hi=remind"
 			data["Checkbox"] = "Get an email if gamenight needs scheduling"
 			data["Purpose"] = "if no one is hosting gamenight"
 		}
 	case gnScheduled:
 		{
 			pref = notifyPreference
-			data["Unsubscribe"] += "?hi=sched"
+			data["Unsubscribe"] += "?hi=schedule"
 			data["Checkbox"] = "Get an email when a gamenight is scheduled"
 			data["Purpose"] = "when a new gamenight is scheduled"
 			if gn == nil {
