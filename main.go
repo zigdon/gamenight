@@ -87,7 +87,8 @@ func main() {
 	r.HandleFunc("/schedule", loginFunc(handleSchedule))
 	r.HandleFunc("/tasks/nag", adminFunc(handleNag))
 	r.HandleFunc("/tasks/schedule", adminFunc(handleTaskSchedule))
-	r.HandleFunc("/tos", handleTOS)
+	r.HandleFunc("/tos", renderPage("tos", ""))
+	r.HandleFunc("/about", renderPage("about", "about"))
 
 	r.Handle("/auth/login", validateCSRF(http.HandlerFunc(handleLogin)))
 	r.Handle("/auth/token", validateCSRF(http.HandlerFunc(handleToken)))
@@ -141,19 +142,26 @@ type IndexData struct {
 	CalendarID string
 }
 
-func handleTOS(w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Base BaseTemplate
-	}{
-		Base: BaseTemplate{
-			Tab:  "",
-			User: &User{},
-		},
-	}
-	tmpl := template.Must(template.ParseFiles("templates/base.html", "templates/tos.html"))
-	err := tmpl.ExecuteTemplate(w, "tos.html", data)
-	if err != nil {
-		log.Printf("Error executing tos: %v", err)
+func renderPage(file, tab string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		user, _ := getUserSession(ctx, r)
+		data := struct {
+			Base BaseTemplate
+		}{
+			Base: BaseTemplate{
+				Tab:  tab,
+				User: user,
+			},
+		}
+		tmpl := template.Must(
+			template.ParseFiles(
+				"templates/base.html",
+				fmt.Sprintf("templates/%s.html", file)))
+		err := tmpl.ExecuteTemplate(w, fmt.Sprintf("%s.html", file), data)
+		if err != nil {
+			log.Printf("Error executing tos: %v", err)
+		}
 	}
 }
 

@@ -28,7 +28,7 @@
             </li>
           </ul>
           <ul class="navbar-nav">
-            {{- if .Base.User.Superuser }}
+            {{- if and .Base.User .Base.User.Superuser }}
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "admin" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Admin
@@ -42,7 +42,10 @@
               </ul>
             </li>
             {{- end }}
-            {{- if .Base.User.Email }}
+            <li class="nav-item">
+              <a class="nav-link{{ if eq .Base.Tab "schedule" }} active" aria-current="page{{ end }}" href="/about">About</a>
+            </li>
+            {{- if and .Base.User .Base.User.Email }}
               <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle{{ if eq .Base.Tab "profile" }} active" aria-current="page{{ end }}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                   {{ .Base.User.Name }}
