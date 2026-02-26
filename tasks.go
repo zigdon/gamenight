@@ -57,7 +57,8 @@ func handleTaskSchedule(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, _ := getUserSession(ctx, r)
 
-	if _, err := maybeSchedule(ctx, w, user.Superuser); err != nil {
+	admin := user != nil && user.Superuser
+	if _, err := maybeSchedule(ctx, w, admin); err != nil {
 		log.Printf("Error scheduling gamenight: %v", err)
 		http.Error(w, "Error processing task", http.StatusInternalServerError)
 	}
