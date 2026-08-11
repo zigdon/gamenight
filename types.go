@@ -33,32 +33,41 @@ const (
 
 func PriorityFromText(p string) Priority {
 	switch p {
-		case "Can": return PriorityCan
-		case "Want": return PriorityWant
-		case "Insist": return PriorityInsist
-		default: return PriorityUndefined
+	case "Can":
+		return PriorityCan
+	case "Want":
+		return PriorityWant
+	case "Insist":
+		return PriorityInsist
+	default:
+		return PriorityUndefined
 	}
 }
 
 func (p Priority) Description() string {
 	switch p {
-		case PriorityCan: return "Can host"
-		case PriorityWant: return "Want to host"
-		case PriorityInsist: return "Would really want to host"
-		default: return ""
+	case PriorityCan:
+		return "Can host"
+	case PriorityWant:
+		return "Want to host"
+	case PriorityInsist:
+		return "Would really want to host"
+	default:
+		return ""
 	}
 }
 
 type BaseTemplate struct {
-	Tab string
-	Subtab string
-	Error string
-	Msg string
-	User *User
+	Tab       string
+	Subtab    string
+	Error     string
+	Msg       string
+	User      *User
 	DevServer bool
 }
 
 type userPreference string
+
 const (
 	emailsPreference userPreference = "e"
 	notifyPreference userPreference = "f"
@@ -70,12 +79,12 @@ type User struct {
 	DefaultLocation string         `datastore:"l"`
 	Superuser       bool           `datastore:"s"`
 	// Get nag emails when a gn has not been scheduled
-	Emails          bool           `datastore:"e"`
+	Emails bool `datastore:"e"`
 	// Get an email when a new gn is scheduled
-	Notify          bool           `datastore:"f"`
-	Invite 			bool 		   `datastore:"i"`
-	Name            string         `datastore:"n"`
-	Color           string         `datastore:"c"`
+	Notify bool   `datastore:"f"`
+	Invite bool   `datastore:"i"`
+	Name   string `datastore:"n"`
+	Color  string `datastore:"c"`
 }
 
 func (u User) Email() string {
@@ -92,18 +101,18 @@ type Gamenight struct {
 	Status     string         `datastore:"s"`
 	LastUpdate time.Time      `datastore:"u"`
 	// Denormalized from invitation
-	Date     time.Time      `datastore:"d"`
-	Time     time.Time      `datastore:"t"`
-	Location string         `datastore:"l"`
-	Notes    string         `datastore:"n"`
+	Date     time.Time `datastore:"d"`
+	Time     time.Time `datastore:"t"`
+	Location string    `datastore:"l"`
+	Notes    string    `datastore:"n"`
 	Owner    *User
 	Invite   *Invitation
 
-	InviteKey   *datastore.Key `datastore:"a"`
-	OwnerKey    *datastore.Key `datastore:"o"`
+	InviteKey *datastore.Key `datastore:"a"`
+	OwnerKey  *datastore.Key `datastore:"o"`
 
 	EventDetails *calendar.Event `datastore:"-"`
-	Relative string `datastore:"-"`
+	Relative     string          `datastore:"-"`
 }
 
 func (g Gamenight) GetOwner() *User {
@@ -201,7 +210,7 @@ func (g *Gamenight) String() string {
 		name = owner.Name
 	}
 	return fmt.Sprintf("%s: %s@%s - %s (%s)",
-	    g.When(), name, g.Location, g.Status, g.EventID)
+		g.When(), name, g.Location, g.Status, g.EventID)
 }
 
 type Invitation struct {
@@ -214,8 +223,8 @@ type Invitation struct {
 	Owner    *User
 
 	OwnerKey  *datastore.Key `datastore:"o"`
-	Scheduled *Gamenight    `datastore:"-"`
-	Relative string         `datastore:"-"`
+	Scheduled *Gamenight     `datastore:"-"`
+	Relative  string         `datastore:"-"`
 }
 
 func (i *Invitation) Schedule(ctx context.Context) error {
@@ -237,15 +246,15 @@ func (i *Invitation) Schedule(ctx context.Context) error {
 	out("Scheduling %s", i.String())
 
 	gn := &Gamenight{
-		ID: datastore.IncompleteKey("Gamenight", nil),
-		Status: "Yes",
+		ID:         datastore.IncompleteKey("Gamenight", nil),
+		Status:     "Yes",
 		LastUpdate: now,
-		Date: i.When(),
-		Time: i.When(),  // Redundant and obsolete, but keep filling it for now.
-		Location: i.Location,
-		Notes: i.Notes,
-		OwnerKey: i.OwnerKey,
-		InviteKey: i.Key,
+		Date:       i.When(),
+		Time:       i.When(), // Redundant and obsolete, but keep filling it for now.
+		Location:   i.Location,
+		Notes:      i.Notes,
+		OwnerKey:   i.OwnerKey,
+		InviteKey:  i.Key,
 	}
 
 	nk, err := dsClient.Put(ctx, gn.ID, gn)
@@ -289,14 +298,14 @@ func (i Invitation) GetOwner() *User {
 
 func (i Invitation) GetGamenight(ctx context.Context) (*Gamenight, error) {
 	it := dsClient.Run(ctx,
-	    datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key))
+		datastore.NewQuery("Gamenight").FilterField("a", "=", i.Key))
 	var gn Gamenight
 	_, err := it.Next(&gn)
 	if err == iterator.Done {
 		return nil, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("can't query for gamenight for %s: %v",
-		    i.String(), err)
+			i.String(), err)
 	}
 	r := &gn
 	return r, nil
@@ -325,7 +334,7 @@ func (i *Invitation) Load(ctx context.Context) error {
 	} else if sameDay(i.Date, tomorrow) {
 		i.Relative = "Tomorrow"
 	} else {
-		delta := time.Until(i.Date).Hours()/24
+		delta := time.Until(i.Date).Hours() / 24
 		i.Relative = fmt.Sprintf("In %d days", int(delta))
 	}
 	return nil
@@ -334,9 +343,12 @@ func (i *Invitation) Load(ctx context.Context) error {
 func (i Invitation) DateText() string {
 	suf := "th"
 	switch i.Date.Day() {
-		case 1: suf = "st"
-		case 2: suf = "nd"
-		case 3: suf = "rd"
+	case 1, 21, 31:
+		suf = "st"
+	case 2, 22:
+		suf = "nd"
+	case 3, 23:
+		suf = "rd"
 	}
 	return fmt.Sprintf(i.When().Format("Monday, Jan 2%s, 2006 at 3:04 pm"), suf)
 }
@@ -374,32 +386,32 @@ func (i *Invitation) String() string {
 }
 
 type invLoader struct {
-	Key          *datastore.Key `datastore:"__key__"`
-	Date         time.Time      `datastore:"d"`
-	Time         time.Time      `datastore:"t"`
-	Location     string         `datastore:"l"`
-	Notes        string         `datastore:"n"`
+	Key      *datastore.Key `datastore:"__key__"`
+	Date     time.Time      `datastore:"d"`
+	Time     time.Time      `datastore:"t"`
+	Location string         `datastore:"l"`
+	Notes    string         `datastore:"n"`
 	// TODO: Convert old entries from string to int, so we can remove this hack.
 	// Handle either string or int, since we changed how we do this.
-	Priority     any            `datastore:"p"`
-	DateText     string         `datastore:"datetext"`
-	PriorityText string         `datastore:"priority_text"`
+	Priority     any    `datastore:"p"`
+	DateText     string `datastore:"datetext"`
+	PriorityText string `datastore:"priority_text"`
 
-	OwnerKey  *datastore.Key `datastore:"o"`
+	OwnerKey *datastore.Key `datastore:"o"`
 	// unused?
 	Owner     *User
 	Scheduled *Gamenight
-	Relative string
+	Relative  string
 }
 
 func (il invLoader) Convert() Invitation {
 	i := Invitation{
-		Key: il.Key,
-		Date: il.Date.In(tz()),
-		Time: il.Time.In(tz()),
+		Key:      il.Key,
+		Date:     il.Date.In(tz()),
+		Time:     il.Time.In(tz()),
 		OwnerKey: il.OwnerKey,
 		Location: il.Location,
-		Notes: il.Notes,
+		Notes:    il.Notes,
 	}
 	if p, ok := il.Priority.(string); ok {
 		i.Priority = PriorityFromText(p)
@@ -411,7 +423,6 @@ func (il invLoader) Convert() Invitation {
 
 	return i
 }
-
 
 type Config struct {
 	Name  string `datastore:"n"`

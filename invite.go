@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -108,11 +109,11 @@ func createInvite(r *http.Request, data *InviteData, user *User) error {
 
 	data.ParsedTime = parsedTime // Store parsed time in data struct
 	suf := "th"
-	if parsedTime.Day() == 1 {
+	if slices.Contains([]int{1, 21, 31}, parsedTime.Day()) {
 		suf = "st"
-	} else if parsedTime.Day() == 2 {
+	} else if slices.Contains([]int{2, 22}, parsedTime.Day()) {
 		suf = "nd"
-	} else if parsedTime.Day() == 3 {
+	} else if slices.Contains([]int{3, 23}, parsedTime.Day()) {
 		suf = "rd"
 	}
 
